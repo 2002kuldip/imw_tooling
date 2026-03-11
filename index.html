@@ -1655,19 +1655,17 @@ function confirmReturnAction(id, condition) {
 
   /* ---------- Init ---------- */
   /* ---------- Init ---------- */
-  (function init(){
+(function init(){
     document.body.setAttribute("data-theme", meta.theme || "dark");
-    setSyncChip(meta.lastSaved ? ("Saved @ " + meta.lastSaved) : "Ready");
     
-    lastSnapshot = getDataSnapshot();
-    startAutoSync();
-    updateSlipPreview();
-    
-    // પેજ લોડ થાય ત્યારે ડેટા ખેંચવા માટે ફંક્શન કોલ
+    // ક્લાઉડમાંથી ડેટા ખેંચો
     fetchFromCloud(); 
     
-    render(); // બધું સેટ થયા પછી છેલ્લે રેન્ડર કરો
-
+    startAutoSync();
+    updateSlipPreview();
+    render(); 
+})();
+  
     // Live duplicate hint on Add Item
     ["ai_code","ai_desc"].forEach(id=>{
       const el = document.getElementById(id);
@@ -1686,9 +1684,11 @@ function confirmReturnAction(id, condition) {
   // આ ફંક્શનને init() ની બહાર રાખો જેથી તે ગમે ત્યાંથી એક્સેસ થઈ શકે
   async function fetchFromCloud() {
     try {
-        const { data: cloudStock, error } = await supabaseClient.from('stock').select('*');
-        if (error) throw error;
-
+        setSyncChip("Syncing with Cloud...");
+        
+        // 1. Stock Data Fetch કરો
+        const { data: cloudStock, error: stockErr } = await supabaseClient.from('stock').select('*');
+        if (stockErr) throw stockErr;
         if (cloudStock && cloudStock.length > 0) {
             stock = cloudStock.map(s => ({ 
                 code: s.code, 
@@ -1696,15 +1696,37 @@ function confirmReturnAction(id, condition) {
                 qty: s.qty, 
                 min: s.min_level 
             }));
-            render(); // AA LINE HOVI JARURI CHE
-            setSyncChip("Cloud Data Loaded ✅");
         }
-    } catch (e) {
-        setSyncChip("Offline Mode / Load Error");
-        render(); // Error aave to pan local data sathe render karo
-    }
-}
 
+        // 2. Transactions Data Fetch કરો
+        const { data: cloudTrans, error: transErr } = await supabaseClient.from('transactions').select('*');
+        if (transErr) throw transErr;
+        if (cloudTrans) {
+            transactions = cloudTrans.map(t => ({
+                id: t.id,
+                issueTs: t.issue_ts,
+                date: t.date,
+                returnDate: t.return_date,
+                slipNo: t.slip_no,
+                itemCode: t.item_code,
+                itemDesc: t.item_desc,
+                partName: t.part_name,
+                operator: t.operator,
+                machine: t.machine,
+                qty: t.qty,
+                status: t.status,
+                remarks: t.remarks
+            }));
+        }
+
+        render(); // ડેટા આવ્યા પછી UI અપડેટ કરો
+        setSyncChip("Cloud Data Loaded ✅");
+    } catch (e) {
+        console.error("Fetch Error:", e);
+        setSyncChip("Offline Mode / Load Error ❌");
+    }
+  }
+  
 // Sidebar toggle function
 function toggleSidebar() {
   const sidebar = document.querySelector('.sidebar');
