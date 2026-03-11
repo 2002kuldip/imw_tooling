@@ -135,8 +135,100 @@
     .toast.warn .dot{ background:var(--amber); }
     .toast.error .dot{ background:var(--red); }
 
-    @media (max-width:1100px){ .app{ grid-template-columns:1fr; } .sidebar{ position:relative; height:auto; } .stats{ grid-template-columns:repeat(2,1fr); } table{ min-width:760px; } }
-    @media (max-width:520px){ .stats{ grid-template-columns:1fr; } table{ min-width:680px; } header.glass{ gap:10px; } }
+/* --- MOBILE REFINEMENT --- */
+/* --- PC / Desktop (મોટી સ્ક્રીન) માટે --- */
+@media (min-width: 1101px) {
+  .app { 
+    grid-template-columns: 360px 1fr !important; 
+  }
+  .sidebar { 
+    display: block !important; 
+    position: sticky !important;
+    top: 18px;
+  }
+  .hamburger { display: none; }
+  th, td { display: table-cell !important; }
+  table { min-width: 1000px; }
+  .table-wrap { overflow-x: auto; }
+}
+
+/* --- Mobile (નાની સ્ક્રીન) માટે --- */
+@media (max-width: 1100px) {
+  .app { grid-template-columns: 1fr !important; }
+  .table-wrap { overflow-x: hidden !important; width: 100%; }
+  
+  table { 
+    width: 100% !important; 
+    min-width: 100% !important; 
+    table-layout: auto !important; 
+  }
+
+  .sidebar { 
+    display: none; 
+    position: fixed !important; 
+    top: 0; left: 0; 
+    width: 85%; 
+    height: 100vh; 
+    z-index: 9999 !important; 
+    background: var(--bg1) !important;
+    padding: 20px;
+    overflow-y: auto;
+    box-shadow: 10px 0 50px rgba(0,0,0,0.8);
+  }
+  .sidebar.active { display: block !important; }
+
+  .toast-wrap { z-index: 10001 !important; }
+  .modal-backdrop { z-index: 10002 !important; }
+
+  /* --- 'પેન્ડિંગ રીટર્ન' અને 'સ્ક્રેપ રિપોર્ટ' (Mobile) --- */
+  /* ફક્ત Date(1), Slip No(2), Machine(6) અને Action(9) બતાવવા */
+  #mainTable th:nth-child(3), #mainTable td:nth-child(3), 
+  #mainTable th:nth-child(4), #mainTable td:nth-child(4), 
+  #mainTable th:nth-child(5), #mainTable td:nth-child(5), 
+  #mainTable th:nth-child(7), #mainTable td:nth-child(7), 
+  #mainTable th:nth-child(8), #mainTable td:nth-child(8)  
+  { display: none !important; }
+
+  /* --- 'Transactions (All)' (Mobile) --- */
+  /* જે ટેબલમાં ઘણી બધી કોલમ છે તેમાં જ આ લાગુ પડશે */
+  .transactions-table th:nth-child(1), .transactions-table td:nth-child(1),
+  .transactions-table th:nth-child(3), .transactions-table td:nth-child(3),
+  .transactions-table th:nth-child(6), .transactions-table td:nth-child(6),
+  .transactions-table th:nth-child(7), .transactions-table td:nth-child(7),
+  .transactions-table th:nth-child(8), .transactions-table td:nth-child(8),
+  .transactions-table th:nth-child(10), .transactions-table td:nth-child(10),
+  .transactions-table th:nth-child(11), .transactions-table td:nth-child(11)
+  { display: none !important; }
+
+  /* --- 'Part Master' અને 'Operator Master' માટે બધી કોલમ બતાવવી --- */
+  .master-table th, .master-table td {
+    display: table-cell !important;
+  }
+
+  th, td { 
+    padding: 8px 4px !important; 
+    font-size: 10px !important; 
+    white-space: normal !important; 
+    word-break: break-word !important; 
+    vertical-align: top;
+  }
+
+  .actions { 
+    display: flex !important; 
+    flex-direction: column !important; 
+    gap: 4px; 
+  }
+  .mini { 
+    width: 100% !important; 
+    text-align: center; 
+    padding: 6px 2px !important;
+  }
+  .mini.good, .mini.bad { display: block !important; } 
+  
+  .row2 { grid-template-columns: 1fr !important; }
+}
+
+    
   </style>
 </head>
 
@@ -148,31 +240,35 @@
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M7 7h10v10H7V7Z" stroke="rgba(255,255,255,.9)" stroke-width="2"/><path d="M4 4h16v16H4V4Z" stroke="rgba(255,255,255,.55)" stroke-width="2"/></svg>
     </div>
     <div>
-      <h1>IMW Tooling Management</h1>
-      <small>Modern Glass UI • Excel Import (SheetJS) • LocalStorage Sync • Auto-sync</small>
+      <h1>IMW Tooling</h1>
+      <small>Management System</small>
     </div>
   </div>
+   
+
 
   <div class="toolbar">
-    <span class="chip" id="syncChip">Sync: Ready</span>
-
-    <!-- Excel Upload: BUTTON + hidden file input -->
-    <button class="btn primary" title="Excel upload (Code, Description, Quantity, Min_Level)" onclick="triggerExcelPick()">
-      Excel Upload
-    </button>
-    <input id="excelFile" type="file" accept=".xlsx,.xls" style="display:none;" />
-
-    <button class="btn" onclick="downloadTemplate()">Template (.xlsx)</button>
-    <button class="btn success" onclick="exportStockXlsx()">Export Stock</button>
-    <button class="btn" onclick="toggleTheme()">Theme</button>
+    <button class="hamburger" onclick="toggleSidebar()" title="Menu">☰</button>
+    
+    <div class="header-actions">
+       <button class="btn primary" onclick="triggerExcelPick()">Excel</button>
+       <button class="btn success" onclick="exportStockXlsx()">Export</button>
+       <button class="btn" onclick="toggleTheme()">Theme</button>
+    </div>
   </div>
 </header>
+
 
 <div class="app">
   <!-- Sidebar -->
   <aside class="glass sidebar">
-    <h3 class="section-title"> નવી ઇશ્યુ એન્ટ્રી </h3>
-    <div class="muted">ટૂલ select કરો, operator/part/machine નાખો અને issue કરો.</div>
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+    <h3 class="section-title" style="margin:0;">નવી ઇશ્યુ એન્ટ્રી</h3>
+    <button class="mini bad" onclick="toggleSidebar()" style="padding: 8px 12px; border-radius: 8px; cursor: pointer;">✕ Close</button>
+  </div>
+
+  <div class="muted">ટૂલ select કરો, operator/part/machine નાખો અને issue કરો.</div>
+  
 
     <!-- Slip No preview -->
     <div class="field">
@@ -548,8 +644,36 @@
   function formatDMY(ts){ const d=new Date(ts); return `${pad2(d.getDate())}-${pad2(d.getMonth()+1)}-${d.getFullYear()}`; }
   function ensureSlipSeq(){ if (!meta) meta={}; if (!meta.slipSeq || typeof meta.slipSeq!=="object") meta.slipSeq = {}; }
   function getNextSlipNo(ts){ ensureSlipSeq(); const dk=formatDMY(ts); const next=(Number(meta.slipSeq[dk]||0)+1); return `ISSU_${dk}_${next}`; }
-  function reserveSlipNo(ts){ ensureSlipSeq(); const dk=formatDMY(ts); const next=(Number(meta.slipSeq[dk]||0)+1); meta.slipSeq[dk]=next; return `ISSU_${dk}_${next}`; }
-  function updateSlipPreview(){ const el=document.getElementById("slipPreview"); if (el) el.value = getNextSlipNo(Date.now()); }
+  
+  function reserveSlipNo(ts) {
+  ensureSlipSeq();
+  const dk = formatDMY(ts);
+  let next = Number(meta.slipSeq[dk] || 0) + 1;
+  
+  let finalSlip = `ISSU_${dk}_${next}`;
+  // જો આ નંબર પહેલેથી કોઈ ટ્રાન્ઝેક્શનમાં વપરાયો હોય, તો આગળનો નંબર લો
+  while (transactions.some(t => t.slipNo === finalSlip)) {
+    next++;
+    finalSlip = `ISSU_${dk}_${next}`;
+  }
+  
+  meta.slipSeq[dk] = next;
+  return finalSlip;
+}
+
+function getNextSlipNo(ts) {
+  ensureSlipSeq();
+  const dk = formatDMY(ts);
+  let next = Number(meta.slipSeq[dk] || 0) + 1;
+  
+  let previewSlip = `ISSU_${dk}_${next}`;
+  // પ્રિવ્યૂમાં પણ ડુપ્લીકેટ ચેક કરો
+  while (transactions.some(t => t.slipNo === previewSlip)) {
+    next++;
+    previewSlip = `ISSU_${dk}_${next}`;
+  }
+  return previewSlip;
+}
 
   /* ---------- Issue ---------- */
   function handleIssue(){
@@ -595,50 +719,75 @@
   }
 
   /* ---------- Return/Scrap ---------- */
-  function processReturnQty(id, condition){
-    const idx = transactions.findIndex(t => t.id === id);
-    if (idx === -1) return;
-    const t = transactions[idx];
-    const max = Number(t.qty) || 0;
-    if (max <= 0) return toast("warn","No Qty","આ entry માટે Qty 0 છે.");
+function processReturnQty(id, condition) {
+  const idx = transactions.findIndex(t => t.id === id);
+  if (idx === -1) return;
+  const t = transactions[idx];
+  const max = Number(t.qty) || 0;
+  if (max <= 0) return toast("warn", "No Qty", "જથ્થો 0 છે.");
 
-    const label = condition === "Good" ? "Return (Good)" : "Scrap";
-    const input = prompt(`Enter quantity for ${label} (1 - ${max})`, String(max));
-    if (input === null) return;
+  // ડાર્ક થીમ બેઝડ મોડલ ઇનપુટ
+  document.getElementById("modalTitle").innerText = condition === "Good" ? "રીટર્ન ટૂલ (Good)" : "ટૂલ સ્ક્રેપ (Scrap)";
+  document.getElementById("detailsBody").innerHTML = `
+    <div class="dg-item" style="margin-bottom:15px; background:rgba(255,255,255,0.05); padding:10px; border-radius:10px;">
+      <b style="color:var(--blue)">Item: ${escapeHtml(t.itemCode)}</b>
+      <div class="val" style="font-size:12px; margin-top:5px;">${escapeHtml(t.itemDesc)}</div>
+    </div>
+    <div class="field">
+      <label>જથ્થો દાખલ કરો (1 થી ${max})</label>
+      <input id="customQtyInput" type="number" min="1" max="${max}" value="${max}" 
+             style="width:100%; padding:12px; background:rgba(0,0,0,0.2); border:1px solid var(--stroke); color:var(--text); border-radius:10px;">
+    </div>
+    <div style="margin-top:20px; display:flex; gap:10px;">
+      <button class="btn success" style="flex:1" onclick="confirmReturnAction(${id}, '${condition}')">Confirm</button>
+      <button class="btn" style="flex:1" onclick="closeDetails()">Cancel</button>
+    </div>
+  `;
+  document.getElementById("modalBackdrop").style.display = "flex";
+}
 
-    const q = parseInt(String(input).trim(), 10);
-    if (!Number.isFinite(q) || q <= 0 || q > max) return toast("warn","Qty Invalid",`Qty 1 થી ${max} વચ્ચે નાખો.`);
+// નવું કન્ફર્મેશન ફંક્શન
+function confirmReturnAction(id, condition) {
+  const qtyInput = document.getElementById("customQtyInput").value;
+  const q = parseInt(qtyInput);
+  const idx = transactions.findIndex(t => t.id === id);
+  const t = transactions[idx];
+  const max = Number(t.qty) || 0;
 
-    const now = new Date().toLocaleString();
-
-    if (condition === "Good"){
-      const sIdx = stock.findIndex(s => s.code === t.itemCode);
-      if (sIdx !== -1) stock[sIdx].qty = (Number(stock[sIdx].qty)||0) + q;
-    }
-
-    transactions.push({
-      id: Date.now(),
-      date: t.date,
-      issueTs: t.issueTs || (Date.parse(t.date) || t.id),
-      slipNo: t.slipNo || "",
-      itemCode: t.itemCode,
-      itemDesc: t.itemDesc,
-      partName: t.partName || "",
-      operator: t.operator,
-      machine: t.machine,
-      qty: q,
-      status: (condition === "Good") ? "Returned (Good)" : "Scrapped",
-      returnDate: now,
-      remarks: t.remarks || ""
-    });
-
-    const remaining = max - q;
-    if (remaining > 0) t.qty = remaining; else transactions.splice(idx, 1);
-
-    saveAll(); render();
-    toast(condition==="Good"?"success":"error", condition==="Good"?"Returned":"Scrapped",
-      `${t.itemCode} • Part: ${t.partName||"-"} • Qty ${q} • Remaining: ${remaining}`);
+  if (!Number.isFinite(q) || q <= 0 || q > max) {
+    return toast("warn", "Qty Invalid", `Qty 1 થી ${max} વચ્ચે નાખો.`);
   }
+
+  if (condition === "Good") {
+    const sIdx = stock.findIndex(s => s.code === t.itemCode);
+    if (sIdx !== -1) stock[sIdx].qty = (Number(stock[sIdx].qty) || 0) + q;
+  }
+
+  transactions.push({
+    id: Date.now(),
+    date: t.date,
+    issueTs: t.issueTs || (Date.parse(t.date) || t.id),
+    slipNo: t.slipNo || "",
+    itemCode: t.itemCode,
+    itemDesc: t.itemDesc,
+    partName: t.partName || "",
+    operator: t.operator,
+    machine: t.machine,
+    qty: q,
+    status: (condition === "Good") ? "Returned (Good)" : "Scrapped",
+    returnDate: new Date().toLocaleString(),
+    remarks: t.remarks || ""
+  });
+
+  const remaining = max - q;
+  if (remaining > 0) t.qty = remaining; else transactions.splice(idx, 1);
+
+  saveAll(); render(); closeDetails();
+  toast(condition === "Good" ? "success" : "error", "Done", `Qty ${q} પ્રોસેસ થઈ ગઈ છે.`);
+}
+
+
+
   function processReturn(id, condition){ return processReturnQty(id, condition); }
 
   /* ---------- Add Item / Stock ---------- */
@@ -1547,14 +1696,37 @@
                 qty: s.qty, 
                 min: s.min_level 
             }));
-            render(); 
+            render(); // AA LINE HOVI JARURI CHE
             setSyncChip("Cloud Data Loaded ✅");
         }
     } catch (e) {
-        console.error("Cloud Fetch Error:", e);
         setSyncChip("Offline Mode / Load Error");
+        render(); // Error aave to pan local data sathe render karo
     }
+}
+
+// Sidebar toggle function
+function toggleSidebar() {
+  const sidebar = document.querySelector('.sidebar');
+  if (sidebar) {
+    sidebar.classList.toggle('active');
   }
+}
+
+// Bahr click karvathi sidebar bandh karva mate
+document.addEventListener('mousedown', function(event) {
+  const sidebar = document.querySelector('.sidebar');
+  const hamburger = document.querySelector('.hamburger');
+  
+  if (window.innerWidth <= 1100 && 
+      sidebar && sidebar.classList.contains('active') && 
+      !sidebar.contains(event.target) && 
+      !hamburger.contains(event.target)) {
+    sidebar.classList.remove('active');
+  }
+});
+
+
 
 </script>
 
