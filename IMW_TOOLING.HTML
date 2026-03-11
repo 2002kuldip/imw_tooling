@@ -1,0 +1,1562 @@
+<!DOCTYPE html>
+<html lang="gu">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>IMW Tooling - Modern Glass Dashboard (Excel Sync)</title>
+
+  <!-- Google Font: Gujarati (CORRECT TAGS) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Gujarati:wght@400;700&display=swap" rel="stylesheet">
+
+  <!-- SheetJS (XLSX) -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.20.0/dist/xlsx.full.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    :root{
+      --bg1:#0b1220; --bg2:#0b2a5a;
+      --glass: rgba(255,255,255,.10); --glass2: rgba(255,255,255,.07);
+      --stroke: rgba(,.16);
+      --text: rgba(255,255,255,.92); --muted: rgba(255,255,255,.65);
+      --blue:#60a5fa; --indigo:#6366f1; --green:#22c55e; --amber:#f59e0b; --red:#ef4444;
+      --shadow: 0 18px 60px rgba(0,0,0,.45); --shadow2: 0 10px 30px rgba(0,0,0,.35);
+      --radius: 18px;
+    }
+    [data-theme="light"]{
+      --bg1:#e7eefb; --bg2:#f7fbff;
+      --glass: rgba(0,0,0,.04); --glass2: rgba(0,0,0,.03);
+      --stroke: rgba(0,0,0,.10);
+      --text: rgba(11,18,32,.92); --muted: rgba(11,18,32,.60);
+      --shadow: 0 18px 60px rgba(15,23,42,.18); --shadow2: 0 10px 30px rgba(15,23,42,.14);
+    }
+
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: "Noto Sans Gujarati", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(1200px 800px at 18% 10%, rgba(99,102,241,.35), transparent 60%),
+        radial-gradient(900px 700px at 82% 15%, rgba(96,165,250,.30), transparent 55%),
+        radial-gradient(900px 700px at 55% 85%, rgba(34,197,94,.20), transparent 60%),
+        linear-gradient(160deg, var(--bg1), var(--bg2));
+      min-height:100vh; padding: 18px;
+    }
+
+    .app{ max-width:1500px; margin:0 auto; display:grid; grid-template-columns:360px 1fr; gap:18px; align-items:start; }
+    .glass{
+      background: linear-gradient(180deg, var(--glass), var(--glass2));
+      border:1px solid var(--stroke); border-radius: var(--radius);
+      box-shadow: var(--shadow2); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    }
+
+    header.glass{ grid-column:1/-1; padding:14px 16px; display:flex; gap:14px; align-items:center; justify-content:space-between; box-shadow: var(--shadow); }
+    .brand{ display:flex; gap:12px; align-items:center; }
+    .logo{ width:42px; height:42px; border-radius:14px; background:linear-gradient(135deg, rgba(99,102,241,.90), rgba(96,165,250,.85)); box-shadow:0 10px 30px rgba(99,102,241,.30); display:grid; place-items:center; border:1px solid rgba(255,255,255,.22); }
+    .brand h1{ margin:0; font-size:16px; letter-spacing:.2px; line-height:1.1; }
+    .brand small{ display:block; margin-top:2px; color:var(--muted); font-size:12px; }
+
+    .toolbar{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; justify-content:flex-end; }
+    .btn{
+      border:1px solid var(--stroke); background:rgba(255,255,255,.10); color:var(--text);
+      padding:10px 12px; border-radius:12px; cursor:pointer; transition:.18s ease;
+      box-shadow:0 10px 22px rgba(0,0,0,.15); font-weight:700; font-size:13px;
+    }
+    .btn:hover{ transform: translateY(-1px); background: rgba(255,255,255,.14); }
+    .btn.primary{ background: rgba(96,165,250,.22); border-color: rgba(96,165,250,.40); }
+    .btn.success{ background: rgba(34,197,94,.18); border-color: rgba(34,197,94,.35); }
+    .btn.warn{ background: rgba(245,158,11,.16); border-color: rgba(245,158,11,.32); }
+    .mini-nav{ padding:8px 10px; }
+    .chip{ display:inline-flex; align-items:center; gap:8px; padding:8px 10px; border-radius:999px; border:1px solid var(--stroke); background:rgba(255,255,255,.08); color:var(--muted); font-size:12px; white-space:nowrap; }
+
+    .sidebar{ position:sticky; top:18px; height:calc(100vh - 36px); overflow:auto; padding:16px; }
+    .section-title{ margin:0 0 10px; font-size:14px; letter-spacing:.2px; }
+    .muted{ color:var(--muted); font-size:12px; }
+    .field{ margin-top:12px; }
+    label{ display:block; margin-bottom:7px; color:var(--muted); font-size:12px; font-weight:700; }
+    input,select,textarea{ width:100%; padding:11px 12px; border-radius:12px; border:1px solid var(--stroke); background:rgba(255,255,255,.07); color:var(--text); outline:none; }
+    input::placeholder, textarea::placeholder{ color:rgba(255,255,255,.45); }
+    [data-theme="light"] input::placeholder,[data-theme="light"] textarea::placeholder{ color:rgba(11,18,32,.35); }
+    .row2{ display:grid; grid-template-columns: 1fr 1fr; gap:10px; }
+    .divider{ height:1px; background:rgba(255,255,255,.10); margin:14px 0; }
+    .note{ margin-top:12px; padding:12px; border-radius:14px; border:1px dashed rgba(255,255,255,.22); background:rgba(0,0,0,.12); }
+
+    .content{ display:flex; flex-direction:column; gap:18px; }
+    .stats{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+    .stat{ padding:14px; }
+    .stat h4{ margin:0; font-size:12px; color:var(--muted); font-weight:800; letter-spacing:.2px; }
+    .stat .value{ margin-top:8px; font-size:24px; font-weight:900; letter-spacing:.3px; }
+    .stat .sub{ margin-top:6px; color:var(--muted); font-size:12px; }
+
+    .tabs{ padding:14px; }
+    .tabs-header{ display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap; }
+    .tab-buttons{ display:flex; gap:8px; flex-wrap:wrap; padding:6px; border-radius:999px; border:1px solid var(--stroke); background:rgba(255,255,255,.06); }
+    .tab{ padding:9px 12px; border-radius:999px; cursor:pointer; font-weight:900; font-size:12px; color:var(--muted); border:1px solid transparent; transition:.18s ease; user-select:none; }
+    .tab.active{ color:var(--text); background:rgba(99,102,241,.20); border-color:rgba(99,102,241,.35); }
+
+    .table-wrap{ margin-top:12px; overflow:auto; border-radius:14px; border:1px solid rgba(255,255,255,.12); position:relative; }
+    table{ width:100%; border-collapse:separate; border-spacing:0; min-width:1000px; background:rgba(0,0,0,.08); }
+    th,td{ padding:12px; font-size:13px; border-bottom:1px solid rgba(255,255,255,.08); }
+    th{ position:sticky; top:0; z-index:2; text-align:left; font-size:12px; letter-spacing:.2px; color:var(--muted); background:rgba(0,0,0,.22); backdrop-filter:blur(10px); -webkit-backdrop-filter:blur(10px); }
+    tr:hover td{ background:rgba(255,255,255,.05); }
+
+    .pill{ display:inline-flex; align-items:center; gap:8px; padding:6px 10px; border-radius:999px; font-size:11px; font-weight:900; border:1px solid rgba(255,255,255,.16); background:rgba(255,255,255,.06); }
+    .pill.ok{ border-color:rgba(34,197,94,.35); background:rgba(34,197,94,.12); }
+    .pill.low{ border-color:rgba(245,158,11,.40); background:rgba(245,158,11,.12); }
+    .pill.scrap{ border-color:rgba(239,68,68,.40); background:rgba(239,68,68,.12); }
+    .pill.pending{ border-color:rgba(96,165,250,.40); background:rgba(96,165,250,.12); }
+
+    .actions{ display:flex; gap:8px; }
+    .mini{ padding:7px 10px; border-radius:10px; font-size:12px; font-weight:900; border:1px solid var(--stroke); background:rgba(255,255,255,.08); color:var(--text); cursor:pointer; transition:.18s ease; }
+    .mini:hover{ transform:translateY(-1px); }
+    .mini.good{ border-color:rgba(34,197,94,.40); background:rgba(34,197,94,.15); }
+    .mini.bad{ border-color:rgba(239,68,68,.40); background:rgba(239,68,68,.15); }
+    .mini.view{ border-color:rgba(96,165,250,.40); background:rgba(96,165,250,.15); }
+    .mini.del{ border-color:rgba(239,68,68,.50); background:rgba(239,68,68,.18); }
+
+    /* Modal */
+    .modal-backdrop{ position:fixed; inset:0; background:rgba(0,0,0,.45); display:none; align-items:center; justify-content:center; z-index:9998; backdrop-filter:blur(2px); }
+    .modal{ width:min(900px,92vw); background:linear-gradient(180deg, var(--glass), var(--glass2)); border:1px solid var(--stroke); border-radius:16px; box-shadow:var(--shadow); padding:14px; color:var(--text); }
+    .modal header{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; }
+    .modal h3{ margin:0; font-size:16px; }
+    .close-x{ background:rgba(255,255,255,.10); border:1px solid var(--stroke); padding:6px 10px; border-radius:10px; cursor:pointer; color:var(--text); }
+    .details-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px; }
+    .dg-item{ background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); border-radius:12px; padding:10px; }
+    .dg-item b{ display:block; font-size:11px; color:var(--muted); margin-bottom:6px; }
+    .dg-item .val{ font-size:13px; }
+
+    /* Toasts */
+    .toast-wrap{ position:fixed; right:16px; bottom:16px; display:flex; flex-direction:column; gap:8px; z-index:9999; }
+    .toast{ display:flex; gap:10px; align-items:flex-start; background:rgba(0,0,0,.6); color:#fff; padding:10px 12px; border-radius:12px; border:1px solid rgba(255,255,255,.18); transition:.28s ease; }
+    .toast .dot{ width:8px; height:8px; border-radius:50%; background:var(--blue); margin-top:6px; }
+    .toast.success .dot{ background:var(--green); }
+    .toast.warn .dot{ background:var(--amber); }
+    .toast.error .dot{ background:var(--red); }
+
+    @media (max-width:1100px){ .app{ grid-template-columns:1fr; } .sidebar{ position:relative; height:auto; } .stats{ grid-template-columns:repeat(2,1fr); } table{ min-width:760px; } }
+    @media (max-width:520px){ .stats{ grid-template-columns:1fr; } table{ min-width:680px; } header.glass{ gap:10px; } }
+  </style>
+</head>
+
+<body data-theme="dark">
+
+<header class="glass">
+  <div class="brand">
+    <div class="logo" aria-hidden="true">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M7 7h10v10H7V7Z" stroke="rgba(255,255,255,.9)" stroke-width="2"/><path d="M4 4h16v16H4V4Z" stroke="rgba(255,255,255,.55)" stroke-width="2"/></svg>
+    </div>
+    <div>
+      <h1>IMW Tooling Management</h1>
+      <small>Modern Glass UI • Excel Import (SheetJS) • LocalStorage Sync • Auto-sync</small>
+    </div>
+  </div>
+
+  <div class="toolbar">
+    <span class="chip" id="syncChip">Sync: Ready</span>
+
+    <!-- Excel Upload: BUTTON + hidden file input -->
+    <button class="btn primary" title="Excel upload (Code, Description, Quantity, Min_Level)" onclick="triggerExcelPick()">
+      Excel Upload
+    </button>
+    <input id="excelFile" type="file" accept=".xlsx,.xls" style="display:none;" />
+
+    <button class="btn" onclick="downloadTemplate()">Template (.xlsx)</button>
+    <button class="btn success" onclick="exportStockXlsx()">Export Stock</button>
+    <button class="btn" onclick="toggleTheme()">Theme</button>
+  </div>
+</header>
+
+<div class="app">
+  <!-- Sidebar -->
+  <aside class="glass sidebar">
+    <h3 class="section-title"> નવી ઇશ્યુ એન્ટ્રી </h3>
+    <div class="muted">ટૂલ select કરો, operator/part/machine નાખો અને issue કરો.</div>
+
+    <!-- Slip No preview -->
+    <div class="field">
+      <label>Issue Slip No (Auto)</label>
+      <input id="slipPreview" type="text" readonly placeholder="ISSU_DD-MM-YYYY_#" />
+      <div class="muted">Issue સમયે slip no auto‑generate થશે.</div>
+    </div>
+
+    <div class="field">
+      <label>ટૂલ પસંદ કરો</label>
+      <select id="toolSelect"></select>
+    </div>
+
+    <div class="field">
+      <label>ઓપરેટરનું નામ (Operator)</label>
+      <select id="opSelect"></select>
+      <div class="muted">Operators મેનેજ કરવા માટે: Operator Master tab જુઓ.</div>
+    </div>
+
+    <div class="field">
+      <label>ભાગનું નામ (Part Name) *</label>
+      <select id="partSelect"></select>
+      <div class="muted" id="partMetaHint">Drawing: — | Material: —</div>
+    </div>
+
+    <div class="field">
+      <label>મશીન (Machine Name)</label>
+      <select id="machSelect">
+        <option>VMC  01  3320</option>
+        <option>VMC  02  2215</option>
+        <option>VMC  03  1580</option>
+      </select>
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label>જથ્થો (Qty)</label>
+        <input id="issQty" type="number" min="1" value="1" />
+      </div>
+      <div class="field">
+        <label>Excel Import Mode</label>
+        <select id="importMode">
+          <option value="replace" selected>Replace Stock</option>
+          <option value="merge">Merge by Code</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Remarks (optional)</label>
+      <textarea id="remarks" rows="2" placeholder="Any note / reason / batch etc."></textarea>
+    </div>
+
+    <div class="field">
+      <button class="btn primary" style="width:100%" onclick="handleIssue()">ટૂલ ઇશ્યુ કરો</button>
+    </div>
+
+    <div class="divider"></div>
+
+    <h3 class="section-title">ઝડપી શોધ</h3>
+    <div class="muted">Table માં current tab મુજબ filter થશે.</div>
+    <div class="field">
+      <input id="globalSearch" type="text" placeholder="Search Item / Part / Machine / Operator / Status..." onkeyup="doSearch()" />
+    </div>
+
+    <div class="note">
+      <b style="font-size:13px;">Excel Columns (તમારા મુજબ)</b>
+      <div class="muted" style="margin-top:6px;">Code, Description, Quantity, Min_Level (Gujarati/English headers supported)</div>
+      <div class="muted" style="margin-top:8px;" id="lastSaved">Last Saved: —</div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="content">
+    <section class="stats">
+      <div class="glass stat"><h4>કુલ સ્ટોક</h4><div class="value" id="totalStock">0</div><div class="sub">Sum of quantities in inventory</div></div>
+      <div class="glass stat"><h4>ચાલુ ટૂલ્સ (Pending Lines)</h4><div class="value" id="totalInUse">0</div><div class="sub">Pending return entries count</div></div>
+      <div class="glass stat"><h4>કુલ સ્ક્રેપ (Qty)</h4><div class="value" id="totalScrap">0</div><div class="sub">Scrapped quantity total</div></div>
+      <div class="glass stat"><h4>LOW Stock Items</h4><div class="value" id="lowCount">0</div><div class="sub">Qty ≤ Min_Level</div></div>
+    </section>
+
+    <section class="glass tabs">
+      <div class="tabs-header">
+        <div class="tab-buttons" id="tabButtons">
+          <div class="tab active" data-tab="pending" onclick="switchTab('pending')">પેન્ડિંગ રીટર્ન</div>
+          <div class="tab" data-tab="scrapHist" onclick="switchTab('scrapHist')">સ્ક્રેપ રિપોર્ટ</div>
+          <div class="tab" data-tab="returnReport" onclick="switchTab('returnReport')">Return Report</div>
+
+          <div class="tab" data-tab="inventorySummary" onclick="switchTab('inventorySummary')">Item Summary</div>
+
+          <div class="tab" data-tab="transactions" onclick="switchTab('transactions')">Transactions (All)</div>
+          <div class="tab" data-tab="additem" onclick="switchTab('additem')">Add Item / Stock</div>
+
+          <div class="tab" data-tab="operatorMaster" onclick="switchTab('operatorMaster')">Operator Master</div>
+          <div class="tab" data-tab="partMaster" onclick="switchTab('partMaster')">Part Master</div>
+          <div class="tab" data-tab="partToolView" onclick="switchTab('partToolView')">Part Tool View</div>
+        </div>
+
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <button class="btn mini-nav" title="Prev (←)" onclick="prevTab()">‹</button>
+          <button class="btn mini-nav" title="Next (→)" onclick="nextTab()">›</button>
+          <div id="rightBar" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center;"></div>
+        </div>
+      </div>
+
+      <div class="table-wrap" id="tableWrap">
+        <div id="slideHost">
+          <table id="mainTable">
+            <thead id="tHead"></thead>
+            <tbody id="tBody"></tbody>
+          </table>
+
+          <!-- Add Item / Stock form -->
+          <div id="addItemPanel" style="display:none; padding:16px;">
+            <div class="row2">
+              <div class="field"><label>Code *</label><input id="ai_code" type="text" placeholder="e.g., IVMCH048"/></div>
+              <div class="field"><label>Min Level</label><input id="ai_min" type="number" min="0" value="0"/></div>
+            </div>
+            <div class="field"><label>Description</label><input id="ai_desc" type="text" placeholder="Description / size etc."/></div>
+            <div class="row2">
+              <div class="field"><label>Quantity *</label><input id="ai_qty" type="number" min="0" value="0"/></div>
+              <div class="field">
+                <label>When code exists</label>
+                <select id="ai_mode"><option value="add" selected>Add Qty (increase)</option><option value="replace">Replace Qty (overwrite)</option></select>
+              </div>
+            </div>
+            <div class="field" style="display:flex; gap:10px; flex-wrap:wrap;">
+              <button class="btn success" onclick="addOrUpdateItem(false)">Add / Update</button>
+              <button class="btn primary" onclick="addOrUpdateItem(true)">Add & New</button>
+            </div>
+          </div>
+
+          <!-- Summary / Part Tool host -->
+          <div id="invSumPanel" style="display:none; padding:16px;"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- Toast container -->
+<div class="toast-wrap" id="toastWrap"></div>
+
+<!-- Details Modal (reused for entry & return group) -->
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal">
+    <header><h3 id="modalTitle">Entry Details</h3><button class="close-x" onclick="closeDetails()">Close</button></header>
+    <div id="detailsBody"></div>
+    <footer><button class="btn" onclick="closeDetails()">OK</button></footer>
+  </div>
+</div>
+
+<!-- Duplicate Warning Modal -->
+<div class="modal-backdrop" id="dupBackdrop">
+  <div class="modal">
+    <header><h3>Duplicate Item Entry</h3><button class="close-x" onclick="closeDuplicate()">Close</button></header>
+    <div id="dupBody"></div>
+    <footer><button class="btn" onclick="closeDuplicate()">OK</button></footer>
+  </div>
+</div>
+
+<script>
+  /* ---------- Safe parse & XLSX guard ---------- */
+  const SUPABASE_URL = 'https://wdifzkcfukbtxxwvtexh.supabase.co';
+  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndkaWZ6a2NmdWtidHh4d3Z0ZXhoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMyMzQzODAsImV4cCI6MjA4ODgxMDM4MH0.Te-Ag62tjizLb2FLHvwtmAv7uqVtXrJkbbdgN0uXMoI';
+  const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+   
+  function safeParse(key, fallback){
+    try{
+      const raw = localStorage.getItem(key);
+      if (!raw) return fallback;
+      const val = JSON.parse(raw);
+      if (Array.isArray(fallback)) return Array.isArray(val) ? val : fallback;
+      if (fallback && typeof fallback === 'object') return (val && typeof val === 'object') ? val : fallback;
+      return fallback;
+    }catch(e){ console.warn("Bad JSON for", key, e); return fallback; }
+  }
+  function needXlsx(){
+    if (typeof XLSX === "undefined"){ toast("warn","Excel Feature Unavailable","XLSX CDN લોડ નથી થયું. Internet ચેક કરો."); return false; }
+    return true;
+  }
+
+  /* ---------- Keys ---------- */
+  const STOCK_KEY = "imwstockglassv1";
+  const TRANS_KEY = "imwtransglassv1";
+  const META_KEY  = "imwmetaglassv1";
+  const OP_KEY    = "imwopmasterv1";
+  const PART_KEY  = "imwpartmasterv1";
+
+  /* ---------- Data ---------- */
+  let stock = safeParse(STOCK_KEY, [
+    { code: "ITURN088", desc: "WNMG 080412 RH", qty: 3016, min: 10 },
+    { code: "IVMCH048", desc: "1.5 FLAT - 4x15x50", qty: 10, min: 5 },
+    { code: "IBALL001", desc: "1B-50-Rohit", qty: 25, min: 5 }
+  ]);
+  let transactions = safeParse(TRANS_KEY, []);
+  let meta = safeParse(META_KEY, { lastSaved: null, theme: "dark", slipSeq: {} });
+  if (!meta.slipSeq) meta.slipSeq = {};
+  let operators = safeParse(OP_KEY, ["Rajendra Prasad","Amit Patel"]);
+  let parts = safeParse(PART_KEY, [
+    { name: "BRG-HOUSING", drawing: "DR-001", material: "EN8" },
+    { name: "SHAFT-27", drawing: "DR-017", material: "EN19" }
+  ]);
+
+  /* ---------- Tabs ---------- */
+  const TABS = [
+    "pending","scrapHist","returnReport",
+    "inventorySummary","transactions","additem",
+    "operatorMaster","partMaster","partToolView"
+  ];
+  let activeTab = "pending";
+  let transStatusFilter = "all";
+  let ptvSelectedPart = "";
+
+  /* ---------- Utils ---------- */
+  function toast(type, title, msg){
+    const wrap = document.getElementById("toastWrap");
+    const el = document.createElement("div");
+    el.className = `toast ${type || ""}`;
+    el.innerHTML = `<div class="dot"></div><div><b>${escapeHtml(title||"Info")}</b><span style="display:block; margin-top:4px;">${escapeHtml(msg||"")}</span></div>`;
+    wrap.appendChild(el);
+    setTimeout(()=>{ el.style.opacity="0"; el.style.transform="translateY(6px)"; },3200);
+    setTimeout(()=>{ el.remove(); },3600);
+  }
+  function escapeHtml(s){
+    return String(s ?? "").replace(/[&<>"']/g, (m)=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]));
+  }
+  function setSyncChip(text){ document.getElementById("syncChip").textContent = "Sync: " + text; }
+  async function saveAll() {
+    localStorage.setItem(STOCK_KEY, JSON.stringify(stock));
+    localStorage.setItem(TRANS_KEY, JSON.stringify(transactions));
+    localStorage.setItem(OP_KEY, JSON.stringify(operators));
+    localStorage.setItem(PART_KEY, JSON.stringify(parts));
+    
+    meta.lastSaved = new Date().toLocaleString();
+    localStorage.setItem(META_KEY, JSON.stringify(meta));
+    const ls = document.getElementById("lastSaved"); if (ls) ls.textContent = "Last Saved: " + meta.lastSaved;
+
+    try {
+        await supabaseClient.from('stock').upsert(stock.map(s => ({
+            code: s.code,
+            description: s.desc,
+            qty: s.qty,
+            min_level: s.min
+        })), { onConflict: 'code' });
+
+        await supabaseClient.from('transactions').upsert(transactions.map(t => ({
+            id: t.id,
+            issue_ts: t.issueTs || t.id,
+            date: t.date,
+            return_date: t.returnDate,
+            slip_no: t.slipNo,
+            item_code: t.itemCode,
+            item_desc: t.itemDesc,
+            part_name: t.partName,
+            operator: t.operator,
+            machine: t.machine,
+            qty: t.qty,
+            status: t.status,
+            remarks: t.remarks
+        })));
+        setSyncChip("Cloud Synced ✅");
+    } catch (e) {
+        setSyncChip("Sync Failed ❌");
+    }
+  }
+  
+  function normCode(v){ return String(v||"").trim().toUpperCase(); }
+  function codeKey(v){ return normCode(v).replace(/[^A-Z0-9]/g,''); }
+  function normDesc(v){ return String(v||"").trim().replace(/\s+/g,' ').toLowerCase(); }
+  function normName(v){ return String(v||"").trim().replace(/\s+/g,' ').toLowerCase(); }
+
+  // Fuzzy helpers
+  function levenshtein(a,b){
+    a=String(a||""); b=String(b||"");
+    const m=a.length,n=b.length; const dp=new Array(n+1);
+    for(let j=0;j<=n;j++) dp[j]=j;
+    for(let i=1;i<=m;i++){
+      let prev=dp[0]; dp[0]=i;
+      for(let j=1;j<=n;j++){
+        const temp=dp[j];
+        dp[j]= (a[i-1]===b[j-1]) ? prev : 1+Math.min(prev, dp[j], dp[j-1]);
+        prev=temp;
+      }
+    }
+    return dp[n];
+  }
+  function jaccardWordSim(a,b){
+    const as = new Set(normDesc(a).split(/\s+/).filter(Boolean));
+    const bs = new Set(normDesc(b).split(/\s+/).filter(Boolean));
+    if (as.size===0 && bs.size===0) return 1;
+    let inter=0; as.forEach(x=>{ if(bs.has(x)) inter++; });
+    const uni = as.size + bs.size - inter;
+    return uni===0 ? 0 : inter/uni;
+  }
+  function diceBigramSim(a,b){
+    function bigrams(s){
+      s = normDesc(s);
+      const arr=[]; for(let i=0;i<s.length-1;i++) arr.push(s.slice(i,i+2));
+      return arr;
+    }
+    const A = bigrams(a), B = bigrams(b);
+    if (!A.length && !B.length) return 1;
+    const map=new Map(); A.forEach(x=>map.set(x,(map.get(x)||0)+1));
+    let inter=0; B.forEach(x=>{ const c=map.get(x)||0; if(c>0){ inter++; map.set(x,c-1);} });
+    return (2*inter)/(A.length+B.length || 1);
+  }
+  function fuzzyDescScore(a,b){ return Math.max(jaccardWordSim(a,b), diceBigramSim(a,b)); }
+  function codeNearDuplicate(a,b){
+    const ak=codeKey(a), bk=codeKey(b);
+    if (ak && bk && ak===bk) return true;
+    if (Math.max(a.length,b.length) >= 5 && levenshtein(normCode(a), normCode(b)) <= 1) return true;
+    return false;
+  }
+  function findDupAdvanced(code, desc, selfIndex, fuzzyThreshold=0.80){
+    const nC = normCode(code), nD = normDesc(desc);
+    let byCode = -1, byDesc = -1, byCodeSoft = -1, byDescFuzzy = -1, bestScore = 0;
+    stock.forEach((s,i)=>{
+      if (i===selfIndex) return;
+      if (byCode===-1 && normCode(s.code)===nC) byCode = i;
+      if (nD && byDesc===-1 && normDesc(s.desc)===nD) byDesc = i;
+      if (byCodeSoft===-1 && codeNearDuplicate(s.code, code)) byCodeSoft = i;
+      if (nD){
+        const sc = fuzzyDescScore(s.desc, desc);
+        if (sc >= fuzzyThreshold && sc > bestScore){ byDescFuzzy = i; bestScore = sc; }
+      }
+    });
+    return { byCode, byDesc, byCodeSoft, byDescFuzzy, fuzzyScore: bestScore };
+  }
+
+  function showDuplicate(details){
+    const el = document.getElementById("dupBody");
+    const rows = (details||[]).map(d=>{
+      const ex = d.existing || {}; const nw = d.newItem || {};
+      const score = (typeof d.score==='number') ? ` (similarity: ${(d.score*100).toFixed(0)}%)` : "";
+      return `
+        <div class="dg-item" style="margin-bottom:8px;">
+          <b>Reason</b><div class="val">${escapeHtml(d.reason||"Duplicate detected")}${score}</div>
+          <b>Existing Item</b>
+          <div class="val">Code: <b>${escapeHtml(ex.code||"-")}</b> | Desc: ${escapeHtml(ex.desc||"-")}</div>
+          ${d.newItem ? `<b>New Entry</b><div class="val">Code: <b>${escapeHtml(nw.code||"-")}</b> | Desc: ${escapeHtml(nw.desc||"-")}</div>` : ``}
+        </div>`;
+    }).join("") || `<div class="muted">Duplicate found.</div>`;
+    el.innerHTML = `
+      <div class="note"><b style="font-size:13px;">Duplicate detected</b>
+        <div class="muted" style="margin-top:6px;">Same/Similar <b>Code</b> અથવા <b>Description</b> પહેલેથી જ મોજુદ છે. કૃપા કરીને અનોખો Code/Description આપો.</div>
+      </div>
+      <div class="details-grid" style="grid-template-columns:1fr;">${rows}</div>
+    `;
+    document.getElementById("dupBackdrop").style.display = "flex";
+  }
+  function closeDuplicate(){ document.getElementById("dupBackdrop").style.display = "none"; }
+
+  /* ---------- Header canonical ---------- */
+  function normalizeHeader(h){
+    return String(h || "").trim().toLowerCase().replace(/\s+/g,"_").replace(/-+/g,"_").replace(/\+/g,"_");
+  }
+  const HDR_ALIASES = new Map([
+    ["code","code"],["item_code","code"],["tool_code","code"],["કોડ","code"],["કોડ_નંબર","code"],
+    ["description","description"],["desc","description"],["item_description","description"],["વર્ણન","description"],["ડિસ્ક્રિપ્શન","description"],
+    ["quantity","quantity"],["qty","quantity"],["જથ્થો","quantity"],["માત્રા","quantity"],
+    ["min_level","min_level"],["min","min_level"],["minimum_level","min_level"],["મિન_લેવલ","min_level"],["ન્યૂનતમ_જથ્થો","min_level"],["ન્યુનતમ","min_level"]
+  ]);
+  function toCanonical(h){ const nh = normalizeHeader(h); return HDR_ALIASES.get(nh) || nh; }
+
+  /* ---------- Masters helpers ---------- */
+  function opExists(name){ const key = normName(name); return operators.some(o => normName(o) === key); }
+  function partExists(name){ const key = normName(name); return parts.some(p => normName(p.name) === key); }
+  function getPartByName(name){ const key = normName(name); return parts.find(p => normName(p.name) === key) || null; }
+
+  /* ---------- Slip No helpers ---------- */
+  function pad2(n){ return String(n).padStart(2,"0"); }
+  function formatDMY(ts){ const d=new Date(ts); return `${pad2(d.getDate())}-${pad2(d.getMonth()+1)}-${d.getFullYear()}`; }
+  function ensureSlipSeq(){ if (!meta) meta={}; if (!meta.slipSeq || typeof meta.slipSeq!=="object") meta.slipSeq = {}; }
+  function getNextSlipNo(ts){ ensureSlipSeq(); const dk=formatDMY(ts); const next=(Number(meta.slipSeq[dk]||0)+1); return `ISSU_${dk}_${next}`; }
+  function reserveSlipNo(ts){ ensureSlipSeq(); const dk=formatDMY(ts); const next=(Number(meta.slipSeq[dk]||0)+1); meta.slipSeq[dk]=next; return `ISSU_${dk}_${next}`; }
+  function updateSlipPreview(){ const el=document.getElementById("slipPreview"); if (el) el.value = getNextSlipNo(Date.now()); }
+
+  /* ---------- Issue ---------- */
+  function handleIssue(){
+    const toolIdx = parseInt(document.getElementById("toolSelect").value, 10);
+    const opSel = document.getElementById("opSelect");
+    const partSel = document.getElementById("partSelect");
+    const op = (opSel?.value || "").trim();
+    const part = (partSel?.value || "").trim();
+    const mach = document.getElementById("machSelect").value;
+    const qty = parseInt(document.getElementById("issQty").value, 10);
+    const remarks = document.getElementById("remarks").value.trim();
+
+    if (!Number.isInteger(toolIdx)) return toast("error","Tool Missing","ટૂલ select કરો.");
+    if (!op) return toast("warn","Operator Required","ઓપરેટર dropdownમાંથી પસંદ કરો.");
+    if (!part) return toast("warn","Part Name Required","Part dropdownમાંથી પસંદ કરો.");
+    if (!Number.isFinite(qty) || qty <= 0) return toast("warn","Qty Invalid","Qty 1 અથવા વધુ હોવું જોઈએ.");
+    if ((Number(stock[toolIdx].qty)||0) < qty) return toast("error","Stock Low","સ્ટોક ઓછો છે!");
+
+    // Reserve Slip No now
+    const nowTs = Date.now();
+    const slipNo = reserveSlipNo(nowTs);
+
+    stock[toolIdx].qty -= qty;
+
+    transactions.push({
+      id: nowTs,
+      date: new Date(nowTs).toLocaleString(),
+      issueTs: nowTs,
+      slipNo: slipNo,
+      itemCode: stock[toolIdx].code,
+      itemDesc: stock[toolIdx].desc,
+      partName: part,
+      operator: op,
+      machine: mach,
+      qty,
+      status: "Pending",
+      returnDate: null,
+      remarks: remarks || ""
+    });
+    document.getElementById("remarks").value = "";
+    saveAll(); render(); updateSlipPreview();
+    toast("success","Issued", `${slipNo} • ${stock[toolIdx].code} • Part: ${part} • Qty ${qty} (${mach})`);
+  }
+
+  /* ---------- Return/Scrap ---------- */
+  function processReturnQty(id, condition){
+    const idx = transactions.findIndex(t => t.id === id);
+    if (idx === -1) return;
+    const t = transactions[idx];
+    const max = Number(t.qty) || 0;
+    if (max <= 0) return toast("warn","No Qty","આ entry માટે Qty 0 છે.");
+
+    const label = condition === "Good" ? "Return (Good)" : "Scrap";
+    const input = prompt(`Enter quantity for ${label} (1 - ${max})`, String(max));
+    if (input === null) return;
+
+    const q = parseInt(String(input).trim(), 10);
+    if (!Number.isFinite(q) || q <= 0 || q > max) return toast("warn","Qty Invalid",`Qty 1 થી ${max} વચ્ચે નાખો.`);
+
+    const now = new Date().toLocaleString();
+
+    if (condition === "Good"){
+      const sIdx = stock.findIndex(s => s.code === t.itemCode);
+      if (sIdx !== -1) stock[sIdx].qty = (Number(stock[sIdx].qty)||0) + q;
+    }
+
+    transactions.push({
+      id: Date.now(),
+      date: t.date,
+      issueTs: t.issueTs || (Date.parse(t.date) || t.id),
+      slipNo: t.slipNo || "",
+      itemCode: t.itemCode,
+      itemDesc: t.itemDesc,
+      partName: t.partName || "",
+      operator: t.operator,
+      machine: t.machine,
+      qty: q,
+      status: (condition === "Good") ? "Returned (Good)" : "Scrapped",
+      returnDate: now,
+      remarks: t.remarks || ""
+    });
+
+    const remaining = max - q;
+    if (remaining > 0) t.qty = remaining; else transactions.splice(idx, 1);
+
+    saveAll(); render();
+    toast(condition==="Good"?"success":"error", condition==="Good"?"Returned":"Scrapped",
+      `${t.itemCode} • Part: ${t.partName||"-"} • Qty ${q} • Remaining: ${remaining}`);
+  }
+  function processReturn(id, condition){ return processReturnQty(id, condition); }
+
+  /* ---------- Add Item / Stock ---------- */
+  function addOrUpdateItem(clearAfter){
+    const codeRaw = document.getElementById("ai_code").value.trim();
+    const desc = document.getElementById("ai_desc").value.trim();
+    const qtyVal = parseInt(String(document.getElementById("ai_qty").value).trim(), 10);
+    const minVal = parseInt(String(document.getElementById("ai_min").value).trim(), 10);
+    const mode = document.getElementById("ai_mode").value;
+    const code = normCode(codeRaw);
+
+    if (!code) return toast("warn","Code Required","Code નાખો.");
+    if (!Number.isFinite(qtyVal) || qtyVal < 0) return toast("warn","Qty Invalid","Qty 0 અથવા વધારે નાખો.");
+    const minParsed = Number.isFinite(minVal) && minVal >= 0 ? minVal : 0;
+
+    const idx = stock.findIndex(s => normCode(s.code) === code);
+
+    if (idx === -1){
+      const dup = findDupAdvanced(code, desc, -1, 0.80);
+      const reasons = [];
+      if (dup.byCode !== -1){ reasons.push({ reason:"Same Code already exists", existing: stock[dup.byCode], newItem:{code, desc} }); }
+      else if (dup.byCodeSoft !== -1){ reasons.push({ reason:"Near‑duplicate Code detected", existing: stock[dup.byCodeSoft], newItem:{code, desc} }); }
+      if (dup.byDesc !== -1){ reasons.push({ reason:"Same Description already exists", existing: stock[dup.byDesc], newItem:{code, desc} }); }
+      else if (dup.byDescFuzzy !== -1){ reasons.push({ reason:"Similar Description (fuzzy) detected", existing: stock[dup.byDescFuzzy], newItem:{code, desc}, score: dup.fuzzyScore }); }
+      if (reasons.length){ showDuplicate(reasons); return; }
+
+      stock.push({ code, desc: desc || "(No Description)", qty: qtyVal, min: minParsed });
+      toast("success","Item Added", `${code} • Qty ${qtyVal}`);
+    } else {
+      const targetDesc = desc || stock[idx].desc || "";
+      const dup = findDupAdvanced(code, targetDesc, idx, 0.80);
+      const reasons = [];
+      if (dup.byDesc !== -1){ reasons.push({ reason:"Same Description already exists for another item", existing: stock[dup.byDesc], newItem:{code, desc: targetDesc} }); }
+      else if (dup.byDescFuzzy !== -1){ reasons.push({ reason:"Similar Description (fuzzy) exists for another item", existing: stock[dup.byDescFuzzy], newItem:{code, desc: targetDesc}, score: dup.fuzzyScore }); }
+      if (reasons.length){ showDuplicate(reasons); return; }
+
+      if (mode === "add"){
+        stock[idx].qty = (Number(stock[idx].qty)||0) + qtyVal;
+        if (desc) stock[idx].desc = desc;
+        stock[idx].min = minParsed;
+        toast("success","Stock Increased", `${code} • +${qtyVal} (Total: ${stock[idx].qty})`);
+      } else {
+        stock[idx].qty = qtyVal;
+        stock[idx].desc = desc || stock[idx].desc || "(No Description)";
+        stock[idx].min = minParsed;
+        toast("success","Stock Replaced", `${code} • Qty set to ${qtyVal}`);
+      }
+    }
+
+    saveAll(); render();
+
+    if (clearAfter){
+      document.getElementById("ai_code").value = "";
+      document.getElementById("ai_desc").value = "";
+      document.getElementById("ai_qty").value = "0";
+      document.getElementById("ai_min").value = "0";
+      document.getElementById("ai_mode").value = "add";
+      document.getElementById("ai_code").focus();
+    }
+  }
+
+  /* ---------- Delete Item ---------- */
+  function requestDeleteItem(code){
+    const item = stock.find(s=>s.code===code);
+    if (!item) return;
+    const pend = transactions.filter(t=>t.itemCode===code && t.status==="Pending").length;
+    if (pend>0){
+      showDuplicate([{ reason:`Cannot delete: ${pend} pending transaction(s) exist`, existing:item }]);
+      toast("error","Delete Blocked",`Close ${pend} pending line(s) first.`);
+      return;
+    }
+    const ok1 = confirm(`Delete item ${code}? This will remove it from Inventory. (Transactions remain)`);
+    if (!ok1) return;
+    const typed = prompt(`Type the CODE to confirm delete:\n\n${code}`);
+    if (typed===null) return;
+    if (normCode(typed)!==normCode(code)){
+      toast("warn","Not Deleted","Typed code does not match.");
+      return;
+    }
+    stock = stock.filter(s=>s.code!==code);
+    saveAll(); render();
+    toast("success","Deleted", `${code} removed from stock.`);
+  }
+
+  /* ---------- Excel Upload Button + Listener ---------- */
+  function triggerExcelPick(){
+    if (!needXlsx()) return;
+    const el = document.getElementById("excelFile");
+    if (!el){ toast("error","File Control Missing","excelFile control નથી મળ્યું."); return; }
+    el.value = "";
+    el.click();
+  }
+  document.getElementById("excelFile").addEventListener("change", importExcelStock);
+
+  /* ---------- Excel Import ---------- */
+  function importExcelStock(){
+    if (!needXlsx()) return;
+    const input = document.getElementById("excelFile");
+    if (!input.files || !input.files[0]) return;
+
+    const file = input.files[0];
+    const okType = /(\.xlsx|\.xls)$/i.test(file.name);
+    if (!okType){
+      toast("error","Invalid File","મહેરબાની કરી .xlsx અથવા .xls ફાઈલ પસંદ કરો.");
+      input.value = "";
+      return;
+    }
+    const MAX = 15 * 1024 * 1024;
+    if (file.size > MAX){
+      toast("warn","File Too Large","15MB કરતા નાની ફાઈલ અપલોડ કરો.");
+      input.value = "";
+      return;
+    }
+
+    const mode = document.getElementById("importMode").value;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try{
+        const data = new Uint8Array(e.target.result);
+        const wb = XLSX.read(data, { type: "array" });
+        const ws = wb.Sheets[wb.SheetNames[0]];
+
+        const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: "", raw: false });
+        if (!rows.length){ toast("error","Excel Empty","Excel ખાલી છે."); input.value=""; return; }
+
+        const headers = rows[0].map(toCanonical);
+        const idxCode = headers.indexOf("code");
+        const idxDesc = headers.indexOf("description");
+        const idxQty  = headers.indexOf("quantity");
+        const idxMin  = headers.indexOf("min_level");
+        if (idxCode===-1 || idxDesc===-1 || idxQty===-1 || idxMin===-1){
+          toast("error","Header Mismatch","Headers જોઈએ: Code, Description, Quantity, Min_Level");
+          input.value=""; return;
+        }
+
+        const importedMap = new Map();
+        for (let r=1;r<rows.length;r++){
+          const row = rows[r];
+          const code = String(row[idxCode] ?? "").trim();
+          if (!code) continue;
+          const desc = String(row[idxDesc] ?? "").trim();
+          const qty  = Number.parseInt(String(row[idxQty] ?? "").trim(),10);
+          const min  = Number.parseInt(String(row[idxMin] ?? "").trim(),10);
+          importedMap.set(codeKey(code), { code, desc: desc || "(No Description)", qty: Number.isFinite(qty)?qty:0, min: Number.isFinite(min)?min:0 });
+        }
+        const imported = Array.from(importedMap.values());
+        if (!imported.length){ toast("error","No Data","કોઈ valid rows મળ્યા નથી."); input.value=""; return; }
+
+        const dupList = [];
+        const byDescSeen = [];
+        const uniqueByDesc = [];
+        imported.forEach(it=>{
+          const found = byDescSeen.find(x=> fuzzyDescScore(x.desc, it.desc) >= 0.80 );
+          if (found){
+            dupList.push({ reason:"Duplicate/Similar Description in Excel (within file)", existing: found, newItem: it, score: fuzzyDescScore(found.desc, it.desc) });
+          } else {
+            byDescSeen.push(it);
+            uniqueByDesc.push(it);
+          }
+        });
+
+        let importedFinal = [];
+        if (mode === "replace"){
+          importedFinal = uniqueByDesc;
+        } else {
+          uniqueByDesc.forEach(it=>{
+            const d = findDupAdvanced(it.code, it.desc, -1, 0.80);
+            if (d.byCode!==-1){ dupList.push({ reason:"Same Code already exists (stock)", existing: stock[d.byCode], newItem: it }); return; }
+            if (d.byCodeSoft!==-1){ dupList.push({ reason:"Near‑duplicate Code exists (stock)", existing: stock[d.byCodeSoft], newItem: it }); return; }
+            if (d.byDesc!==-1){ dupList.push({ reason:"Same Description already exists (stock)", existing: stock[d.byDesc], newItem: it }); return; }
+            if (d.byDescFuzzy!==-1){ dupList.push({ reason:"Similar Description (fuzzy) exists (stock)", existing: stock[d.byDescFuzzy], newItem: it, score: d.fuzzyScore }); return; }
+            importedFinal.push(it);
+          });
+        }
+
+        if (!importedFinal.length){
+          if (dupList.length){ showDuplicate(dupList.slice(0,50)); toast("warn","All Duplicates","બધી rows duplicate હોવાથી skip કરી."); }
+          else { toast("error","No Data","Import કરવા કંઇ નથી."); }
+          input.value=""; return;
+        }
+
+        if (dupList.length){
+          showDuplicate(dupList.slice(0,50));
+          toast("warn","Duplicates Skipped", `${dupList.length} row(s) skipped.`);
+        }
+
+        if (mode === "replace"){
+          const ok = confirm("Replace Stock mode: હાલનો stock પૂર્ણ replace થશે.\n\nProceed?");
+          if (!ok){ input.value=""; return; }
+          stock = importedFinal;
+        } else {
+          const byCode = new Map(stock.map(s=>[codeKey(s.code), s]));
+          importedFinal.forEach(n=>{
+            const key = codeKey(n.code);
+            if (byCode.has(key)){
+              const cur = byCode.get(key);
+              cur.desc = n.desc; cur.qty = n.qty; cur.min = n.min;
+            } else {
+              stock.push(n);
+            }
+          });
+        }
+
+        saveAll(); render();
+        toast("success","Excel Imported", `${importedFinal.length} items loaded (${mode}).`);
+      } catch(err){
+        console.error(err);
+        toast("error","Import Failed","Excel read error. File format ચેક કરો.");
+      } finally { input.value=""; }
+    };
+    reader.readAsArrayBuffer(file);
+  }
+
+  /* ---------- Exports ---------- */
+  function exportStockXlsx(){
+    if (!needXlsx()) return;
+    try{
+      const rows = [["Code","Description","Quantity","Min_Level"], ...stock.map(s=>[s.code,s.desc,s.qty,s.min])];
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Stock");
+      XLSX.writeFile(wb, "IMW_Stock_Export.xlsx");
+      toast("success","Exported","IMW_Stock_Export.xlsx downloaded.");
+    } catch(e){ console.error(e); toast("error","Export Failed","Export error."); }
+  }
+  function exportTransactionsXlsx(filteredList){
+    if (!needXlsx()) return;
+    try{
+      const list = filteredList || transactions;
+      const rows = [
+        ["ID","Issue_Date","Return_Date","Status","Slip_No","Code","Description","Part_Name","Operator","Machine","Qty","Remarks"],
+        ...list.map(t=>[
+          t.id,t.date||"",t.returnDate||"",t.status||"",t.slipNo||"",t.itemCode||"",t.itemDesc||"",t.partName||"",t.operator||"",t.machine||"",t.qty||0,t.remarks||""
+        ])
+      ];
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Transactions");
+      XLSX.writeFile(wb, "IMW_Transactions_Export.xlsx");
+      toast("success","Exported","IMW_Transactions_Export.xlsx downloaded.");
+    } catch(e){ console.error(e); toast("error","Export Failed","Transactions export error."); }
+  }
+  function exportSummaryXlsx(){
+    if (!needXlsx()) return;
+    try{
+      const list = computeItemSummary();
+      const rows = [["Code","Description","Live_Stock","Issued_Pending","Scrap_Stock","Min_Level","Status"], ...list.map(r=>[r.code, r.desc||"", r.live, r.issuedPending, r.scrapQty, (r.min ?? ""), r.status])];
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Item_Summary");
+      XLSX.writeFile(wb, "IMW_Item_Summary.xlsx");
+      toast("success","Exported","IMW_Item_Summary.xlsx downloaded.");
+    } catch(e){ console.error(e); toast("error","Export Failed","Summary export error."); }
+  }
+
+  /* ---------- Theme & Right bar ---------- */
+  function toggleTheme(){
+    const now = document.body.getAttribute("data-theme")==="dark" ? "light" : "dark";
+    document.body.setAttribute("data-theme", now);
+    meta.theme = now; localStorage.setItem(META_KEY, JSON.stringify(meta));
+    toast("success","Theme","Theme switched to: "+now);
+  }
+  function onStatusChange(val){ transStatusFilter = val; render(); }
+  function onPTVPartChange(val){ ptvSelectedPart = val; render(); }
+
+  function renderRightBar(){
+    const rb = document.getElementById("rightBar");
+    if (activeTab === "transactions"){
+      const opt = (v,l)=>`<option value="${v}" ${transStatusFilter===v?'selected':''}>${l}</option>`;
+      rb.innerHTML = `
+        <label class="muted" style="font-size:12px;">Status</label>
+        <select id="statusFilter" onchange="onStatusChange(this.value)">
+          ${opt('all','All')}${opt('Pending','Pending')}${opt('Returned (Good)','Returned (Good)')}${opt('Scrapped','Scrapped')}
+        </select>
+        <button class="btn success" onclick="exportTransactionsXlsx(getCurrentTransactionsFiltered())">Export Transactions</button>
+        <span class="chip" id="stockCountChip">Items: ${stock.length}</span>
+        <button class="btn warn" onclick="recalcAndRender()">Refresh</button>
+      `;
+    } else if (activeTab === "inventorySummary"){
+      rb.innerHTML = `
+        <button class="btn success" onclick="exportSummaryXlsx()">Export Summary</button>
+        <span class="chip" id="stockCountChip">Items: ${stock.length}</span>
+        <button class="btn warn" onclick="recalcAndRender()">Refresh</button>
+      `;
+    } else if (activeTab === "returnReport"){
+      rb.innerHTML = `
+        <span class="chip">Return groups (Good): ${computeReturnReportRows().length}</span>
+        <button class="btn warn" onclick="recalcAndRender()">Refresh</button>
+      `;
+    } else if (activeTab === "partToolView"){
+      const partOpts = ['<option value="">(Select Part)</option>', ...parts.map(p=>`<option value="${escapeHtml(p.name)}" ${ptvSelectedPart===p.name?'selected':''}>${escapeHtml(p.name)}</option>`)].join("");
+      rb.innerHTML = `
+        <label class="muted" style="font-size:12px;">Part</label>
+        <select id="ptvPart" onchange="onPTVPartChange(this.value)">${partOpts}</select>
+        <span class="chip" id="stockCountChip">Items: ${stock.length}</span>
+        <button class="btn warn" onclick="recalcAndRender()">Refresh</button>
+      `;
+    } else {
+      rb.innerHTML = `<span class="chip" id="stockCountChip">Items: ${stock.length}</span><button class="btn warn" onclick="recalcAndRender()">Refresh</button>`;
+    }
+  }
+  function getCurrentTransactionsFiltered(){
+    if (transStatusFilter === "all") return [...transactions];
+    return transactions.filter(t => t.status === transStatusFilter);
+  }
+
+  /* ---------- Item Summary (with Min + Action) ---------- */
+  function computeItemSummary(){
+    const map = new Map();
+    stock.forEach(s=>{
+      map.set(s.code, { code:s.code, desc:s.desc, live:Number(s.qty)||0, issuedPending:0, scrapQty:0, min:(Number.isFinite(Number(s.min))?Number(s.min):null), status:"-" });
+    });
+    transactions.forEach(t=>{
+      const code=t.itemCode;
+      if (!map.has(code)){ map.set(code,{ code, desc:t.itemDesc||"", live:0, issuedPending:0, scrapQty:0, min:null, status:"-" }); }
+      const rec = map.get(code), q = Number(t.qty)||0;
+      if (t.status==="Pending") rec.issuedPending += q;
+      if (t.status==="Scrapped") rec.scrapQty += q;
+    });
+    map.forEach(rec=>{ if (rec.min!==null) rec.status = (rec.live <= rec.min) ? "LOW" : "OK"; });
+    return Array.from(map.values()).sort((a,b)=> a.code.localeCompare(b.code));
+  }
+
+  /* ---------- Part Tool View rows ---------- */
+  function computePartToolViewRows(partName){
+    const key = normName(partName || "");
+    if (!key) return [];
+    const rel = transactions.filter(t => normName(t.partName||"") === key);
+    const map = new Map();
+    rel.forEach(t=>{
+      const code = t.itemCode || "(unknown)";
+      const desc = t.itemDesc || "";
+      const ts = Number.isFinite(Number(t.issueTs)) ? Number(t.issueTs) : (Date.parse(String(t.date||"")) || (Number(t.id)||0) || null);
+      if (!map.has(code)){
+        map.set(code, { code, desc, lastIssueTs: ts });
+      } else {
+        const rec = map.get(code);
+        if (desc && !rec.desc) rec.desc = desc;
+        if (ts && (!rec.lastIssueTs || ts > rec.lastIssueTs)) rec.lastIssueTs = ts;
+      }
+    });
+    return Array.from(map.values()).sort((a,b)=>{
+      const at = a.lastIssueTs || 0, bt = b.lastIssueTs || 0;
+      if (bt !== at) return bt - at;
+      return a.code.localeCompare(b.code);
+    });
+  }
+
+  /* ---------- Return Report (group by issueTs, having Returned (Good)) ---------- */
+  function computeReturnReportRows(){
+    const groups = new Map();
+    transactions.forEach(t=>{
+      const g = t.issueTs || null;
+      if (!g) return;
+      if (!groups.has(g)) groups.set(g, []);
+      groups.get(g).push(t);
+    });
+
+    const rows = [];
+    groups.forEach((arr, keyTs)=>{
+      let code = "", desc = "", operator = "", machine = "", slipNo = "";
+      let qtyIssue = 0, qtyRet = 0, qtyScrap = 0;
+
+      const pendingRow = arr.find(x=> x.status==="Pending");
+      const anyRow = arr[0];
+
+      code = (pendingRow?.itemCode) || (anyRow?.itemCode) || "";
+      desc = (pendingRow?.itemDesc) || (anyRow?.itemDesc) || "";
+      operator = (pendingRow?.operator) || (anyRow?.operator) || "";
+      machine = (pendingRow?.machine) || (anyRow?.machine) || "";
+      slipNo = (pendingRow?.slipNo) || (anyRow?.slipNo) || "";
+
+      arr.forEach(x=>{
+        const q = Number(x.qty)||0;
+        if (["Pending","Returned (Good)","Scrapped"].includes(x.status)) qtyIssue += q;
+        if (x.status==="Returned (Good)") qtyRet += q;
+        if (x.status==="Scrapped") qtyScrap += q;
+      });
+
+      if (qtyRet > 0){
+        rows.push({
+          issueTs: Number(keyTs),
+          slipNo,
+          code, desc,
+          qtyIssue, qtyRet, qtyScrap,
+          operator, machine,
+          ids: arr.map(x=>x.id)
+        });
+      }
+    });
+
+    rows.sort((a,b)=> b.issueTs - a.issueTs);
+    return rows;
+  }
+
+  /* ---------- Modal ---------- */
+  function openDetails(id){
+    const t = transactions.find(x => x.id === id);
+    if (!t) return;
+    document.getElementById("modalTitle").innerText = "Entry Details";
+    const statusPill = t.status==="Pending" ? `<span class="pill pending">PENDING</span>` : t.status.startsWith("Returned") ? `<span class="pill ok">RETURNED</span>` : `<span class="pill scrap">SCRAP</span>`;
+    document.getElementById("detailsBody").innerHTML = `
+      <div class="details-grid">
+        <div class="dg-item"><b>Issue Slip No</b><div class="val">${escapeHtml(t.slipNo || "-")}</div></div>
+        <div class="dg-item"><b>Status</b><div class="val">${statusPill}</div></div>
+        <div class="dg-item"><b>Issue Date</b><div class="val">${escapeHtml(t.date || "-")}</div></div>
+        <div class="dg-item"><b>Return/Scrap Date</b><div class="val">${escapeHtml(t.returnDate || "-")}</div></div>
+        <div class="dg-item"><b>Item Code</b><div class="val">${escapeHtml(t.itemCode || "-")}</div></div>
+        <div class="dg-item"><b>Description</b><div class="val">${escapeHtml(t.itemDesc || "-")}</div></div>
+        <div class="dg-item"><b>Part Name</b><div class="val">${escapeHtml(t.partName || "-")}</div></div>
+        <div class="dg-item"><b>Operator</b><div class="val">${escapeHtml(t.operator || "-")}</div></div>
+        <div class="dg-item"><b>Machine</b><div class="val">${escapeHtml(t.machine || "-")}</div></div>
+        <div class="dg-item"><b>Quantity</b><div class="val">${escapeHtml(t.qty)}</div></div>
+        <div class="dg-item"><b>Remarks</b><div class="val">${escapeHtml(t.remarks || "—")}</div></div>
+      </div>`;
+    document.getElementById("modalBackdrop").style.display = "flex";
+  }
+
+  function openReturnGroup(issueTs){
+    const arr = transactions.filter(x => (x.issueTs||0) === Number(issueTs));
+    if (!arr.length){ toast("warn","No Data","No entries found for this issue."); return; }
+
+    const pending = arr.find(x=>x.status==="Pending");
+    const any = arr[0];
+    const slipNo = pending?.slipNo || any?.slipNo || "";
+    const code = pending?.itemCode || any?.itemCode || "";
+    const desc = pending?.itemDesc || any?.itemDesc || "";
+    const operator = pending?.operator || any?.operator || "";
+    const machine  = pending?.machine  || any?.machine  || "";
+
+    let qtyIssue=0, qtyRet=0, qtyScrap=0;
+    arr.forEach(x=>{
+      const q = Number(x.qty)||0;
+      if (["Pending","Returned (Good)","Scrapped"].includes(x.status)) qtyIssue += q;
+      if (x.status==="Returned (Good)") qtyRet += q;
+      if (x.status==="Scrapped") qtyScrap += q;
+    });
+
+    const rowsHtml = arr.sort((a,b)=> a.id - b.id).map(x=>{
+      const statusPill = x.status==="Pending" ? `<span class="pill pending">PENDING</span>` : x.status.startsWith("Returned") ? `<span class="pill ok">RETURNED</span>` : `<span class="pill scrap">SCRAP</span>`;
+      return `<tr>
+        <td>${x.id}</td>
+        <td>${escapeHtml(x.date || "-")}</td>
+        <td>${escapeHtml(x.returnDate || "-")}</td>
+        <td>${statusPill}</td>
+        <td>${escapeHtml(x.qty)}</td>
+        <td>${escapeHtml(x.remarks || "—")}</td>
+        <td><button class="mini view" onclick="openDetails(${x.id})">View</button></td>
+      </tr>`;
+    }).join("");
+
+    document.getElementById("modalTitle").innerText = "Return Group Details";
+    document.getElementById("detailsBody").innerHTML = `
+      <div class="details-grid" style="grid-template-columns:1fr 1fr 1fr;">
+        <div class="dg-item"><b>Issue Slip No</b><div class="val">${escapeHtml(slipNo || "-")}</div></div>
+        <div class="dg-item"><b>Item Code</b><div class="val">${escapeHtml(code)}</div></div>
+        <div class="dg-item"><b>Description</b><div class="val">${escapeHtml(desc)}</div></div>
+        <div class="dg-item"><b>Operator</b><div class="val">${escapeHtml(operator || "-")}</div></div>
+        <div class="dg-item"><b>Machine</b><div class="val">${escapeHtml(machine || "-")}</div></div>
+        <div class="dg-item"><b>Qty Issue (total)</b><div class="val">${qtyIssue}</div></div>
+        <div class="dg-item"><b>Qty Return (Good)</b><div class="val">${qtyRet}</div></div>
+        <div class="dg-item"><b>Qty Scrap</b><div class="val">${qtyScrap}</div></div>
+      </div>
+      <div style="margin-top:12px;">
+        <table style="width:100%;">
+          <thead>
+            <tr>
+              <th>Entry ID</th><th>Issue Date</th><th>Return/Scrap Date</th><th>Status</th><th>Qty</th><th>Remarks</th><th>Action</th>
+            </tr>
+          </thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </div>
+    `;
+    document.getElementById("modalBackdrop").style.display = "flex";
+  }
+
+  function closeDetails(){ document.getElementById("modalBackdrop").style.display = "none"; }
+
+  /* ---------- Search / Refresh ---------- */
+  function doSearch(){
+    const val = document.getElementById("globalSearch").value.toLowerCase().trim();
+    if (activeTab === "inventorySummary" || activeTab === "partToolView" || activeTab === "returnReport"){
+      document.querySelectorAll("#invSumPanel tbody tr").forEach(r=>{
+        r.style.display = r.innerText.toLowerCase().includes(val) ? "" : "none";
+      });
+    } else {
+      document.querySelectorAll("#tBody tr").forEach(r=>{
+        r.style.display = r.innerText.toLowerCase().includes(val) ? "" : "none";
+      });
+    }
+  }
+  function recalcAndRender(){ render(); toast("success","Refreshed","UI updated from saved data."); }
+
+  /* ---------- Tabs / Slider Navigation ---------- */
+  function indexOfTab(tab){ return TABS.indexOf(tab); }
+  function prevTab(){ const i=indexOfTab(activeTab); switchTab(TABS[(i-1+TABS.length)%TABS.length]); }
+  function nextTab(){ const i=indexOfTab(activeTab); switchTab(TABS[(i+1)%TABS.length]); }
+
+  function switchTab(tab){
+    const oldIndex = indexOfTab(activeTab);
+    const newIndex = indexOfTab(tab);
+    if (newIndex === -1) return;
+    activeTab = tab;
+    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+    document.querySelector(`.tab[data-tab="${tab}"]`)?.classList.add("active");
+    render(); doSearch();
+  }
+
+  // Swipe + keyboard
+  (function addSwipe(){
+    const wrap = document.getElementById("tableWrap");
+    let sx=null;
+    wrap.addEventListener("touchstart", e=>{ sx = e.touches[0].clientX; }, {passive:true});
+    wrap.addEventListener("touchend", e=>{
+      if (sx===null) return;
+      const ex = (e.changedTouches && e.changedTouches[0]?.clientX) ?? sx;
+      const dx = ex - sx; sx=null;
+      if (Math.abs(dx)>50){ if (dx<0) nextTab(); else prevTab(); }
+    }, {passive:true});
+    document.addEventListener("keydown", e=>{ if (e.key==="ArrowLeft") prevTab(); if (e.key==="ArrowRight") nextTab(); });
+  })();
+
+  /* ---------- Render ---------- */
+  function render(){
+    renderRightBar();
+
+    // Fill dropdowns
+    const toolSelect = document.getElementById("toolSelect");
+    toolSelect.innerHTML = stock.map((s,i)=>{
+      const low = (Number(s.qty)||0) <= (Number(s.min)||0);
+      const tag = low ? " • LOW" : "";
+      return `<option value="${i}">${escapeHtml(s.code)} - ${escapeHtml(s.desc)} (Stock: ${s.qty})${tag}</option>`;
+    }).join("");
+
+    const opSel = document.getElementById("opSelect");
+    opSel.innerHTML = ['<option value="">(Select Operator)</option>', ...operators.map(o=>`<option>${escapeHtml(o)}</option>`)].join("");
+
+    const partSel = document.getElementById("partSelect");
+    partSel.innerHTML = ['<option value="">(Select Part)</option>', ...parts.map(p=>`<option>${escapeHtml(p.name)}</option>`)].join("");
+    partSel.onchange = ()=>{
+      const p = getPartByName(partSel.value);
+      const hint = document.getElementById("partMetaHint");
+      if (p) hint.textContent = `Drawing: ${p.drawing || "—"} | Material: ${p.material || "—"}`;
+      else hint.textContent = `Drawing: — | Material: —`;
+    };
+
+    const head = document.getElementById("tHead");
+    const body = document.getElementById("tBody");
+    const table = document.getElementById("mainTable");
+    const addPanel = document.getElementById("addItemPanel");
+    const invSumPanel = document.getElementById("invSumPanel");
+
+    table.style.display = ""; addPanel.style.display = "none"; invSumPanel.style.display = "none";
+    head.innerHTML = ""; body.innerHTML = "";
+
+    if (activeTab === "pending"){
+      head.innerHTML = `<tr>
+        <th>તારીખ</th><th>Slip No</th><th>ટૂલ</th><th>Part</th><th>ઓપરેટર</th><th>મશીન</th><th>Qty (Pending)</th><th>Status</th><th>Action</th>
+      </tr>`;
+      const pending = transactions.filter(t=>t.status==="Pending");
+      pending.forEach(t=>{
+        body.innerHTML += `<tr>
+          <td>${escapeHtml(t.date)}</td>
+          <td>${escapeHtml(t.slipNo || "-")}</td>
+          <td><b>${escapeHtml(t.itemCode)}</b><div class="muted">${escapeHtml(t.itemDesc||"")}</div></td>
+          <td>${escapeHtml(t.partName || "-")}</td>
+          <td>${escapeHtml(t.operator)}</td>
+          <td>${escapeHtml(t.machine)}</td>
+          <td>${escapeHtml(t.qty)}</td>
+          <td><span class="pill pending">PENDING</span></td>
+          <td><div class="actions">
+            <button class="mini view" onclick="openDetails(${t.id})">View</button>
+            <button class="mini good" onclick="processReturnQty(${t.id}, 'Good')">Good</button>
+            <button class="mini bad" onclick="processReturnQty(${t.id}, 'Scrap')">Scrap</button>
+          </div></td>
+        </tr>`;
+      });
+      if (!pending.length) body.innerHTML = `<tr><td colspan="9" class="muted">No pending returns.</td></tr>`;
+    }
+    else if (activeTab === "scrapHist"){
+      head.innerHTML = `<tr>
+        <th>રિટર્ન તારીખ</th><th>Slip No</th><th>ટૂલ</th><th>Part</th><th>Operator</th><th>મશીન</th><th>Qty</th><th>Status</th><th>Action</th>
+      </tr>`;
+      const scr = transactions.filter(t=>t.status==="Scrapped");
+      scr.forEach(t=>{
+        body.innerHTML += `<tr>
+          <td>${escapeHtml(t.returnDate || "-")}</td>
+          <td>${escapeHtml(t.slipNo || "-")}</td>
+          <td><b>${escapeHtml(t.itemCode)}</b><div class="muted">${escapeHtml(t.itemDesc||"")}</div></td>
+          <td>${escapeHtml(t.partName || "-")}</td>
+          <td>${escapeHtml(t.operator || "-")}</td>
+          <td>${escapeHtml(t.machine)}</td>
+          <td>${escapeHtml(t.qty)}</td>
+          <td><span class="pill scrap">SCRAP</span></td>
+          <td><button class="mini view" onclick="openDetails(${t.id})">View</button></td>
+        </tr>`;
+      });
+      if (!scr.length) body.innerHTML = `<tr><td colspan="9" class="muted">No scrap records.</td></tr>`;
+    }
+    else if (activeTab === "returnReport"){
+      table.style.display = "none";
+      head.innerHTML = ""; body.innerHTML = "";
+      invSumPanel.style.display = "block";
+
+      const rows = computeReturnReportRows();
+      const bodyRows = rows.map(r=>{
+        return `<tr>
+          <td>${escapeHtml(r.slipNo || "-")}</td>
+          <td><b>${escapeHtml(r.code)}</b></td>
+          <td>${escapeHtml(r.desc || "")}</td>
+          <td>${r.qtyIssue}</td>
+          <td>${r.qtyRet}</td>
+          <td>${r.qtyScrap}</td>
+          <td>${escapeHtml(r.operator || "-")}</td>
+          <td>${escapeHtml(r.machine || "-")}</td>
+          <td><button class="mini view" onclick="openReturnGroup(${r.issueTs})">View</button></td>
+        </tr>`;
+      }).join("") || `<tr><td colspan="9" class="muted">No Good returns found.</td></tr>`;
+
+      invSumPanel.innerHTML = `
+        <h3 class="section-title">Return Report (Good Received)</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Slip No</th><th>Code</th><th>Description</th><th>Qty Issue</th><th>Qty Return</th>
+              <th>Qty Scrap</th><th>Operator Name</th><th>Machine Name</th><th>Action</th>
+            </tr>
+          </thead>
+          <tbody>${bodyRows}</tbody>
+        </table>
+      `;
+    }
+    else if (activeTab === "transactions"){
+      head.innerHTML = `<tr>
+        <th>ID</th><th>Issue Date</th><th>Return/Scrap Date</th><th>Status</th><th>Slip No</th><th>Code</th><th>Description</th><th>Part</th><th>Operator</th><th>Machine</th><th>Qty</th><th>Action</th>
+      </tr>`;
+      const list = getCurrentTransactionsFiltered().slice().sort((a,b)=> b.id - a.id);
+      list.forEach(t=>{
+        const statusCell = t.status==="Pending" ? `<span class="pill pending">PENDING</span>` : t.status.startsWith("Returned") ? `<span class="pill ok">RETURNED</span>` : `<span class="pill scrap">SCRAP</span>`;
+        body.innerHTML += `<tr>
+          <td>${t.id}</td>
+          <td>${escapeHtml(t.date || "-")}</td>
+          <td>${escapeHtml(t.returnDate || "-")}</td>
+          <td>${statusCell}</td>
+          <td>${escapeHtml(t.slipNo || "-")}</td>
+          <td><b>${escapeHtml(t.itemCode)}</b></td>
+          <td>${escapeHtml(t.itemDesc || "")}</td>
+          <td>${escapeHtml(t.partName || "-")}</td>
+          <td>${escapeHtml(t.operator || "")}</td>
+          <td>${escapeHtml(t.machine || "")}</td>
+          <td>${escapeHtml(t.qty)}</td>
+          <td><button class="mini view" onclick="openDetails(${t.id})">View</button></td>
+        </tr>`;
+      });
+      if (!list.length) body.innerHTML = `<tr><td colspan="12" class="muted">No transactions found for selected filter.</td></tr>`;
+    }
+    else if (activeTab === "additem"){
+      table.style.display = "none";
+      addPanel.style.display = "block";
+    }
+    else if (activeTab === "operatorMaster"){
+      head.innerHTML = `<tr><th>Operator Name</th><th>Action</th></tr>`;
+      body.innerHTML = `
+        <tr>
+          <td colspan="2">
+            <div class="row2">
+              <div class="field"><label>New Operator</label><input id="opNewName" type="text" placeholder="દે. Rajendra Prasad"/></div>
+              <div class="field" style="display:flex; align-items:flex-end; gap:10px;">
+                <button class="btn success" onclick="addOperator()">Add Operator</button>
+              </div>
+            </div>
+            <div class="muted">Duplicate names not allowed (case-insensitive).</div>
+          </td>
+        </tr>
+      `;
+      operators.forEach(o=>{
+        body.innerHTML += `<tr>
+          <td>${escapeHtml(o)}</td>
+          <td><button class="mini del" onclick="deleteOperator('${escapeHtml(o)}')">Delete</button></td>
+        </tr>`;
+      });
+      if (!operators.length) body.innerHTML += `<tr><td colspan="2" class="muted">No operators. Add above.</td></tr>`;
+    }
+    else if (activeTab === "partMaster"){
+      head.innerHTML = `<tr><th>Part Name</th><th>Drawing No</th><th>Material</th><th>Action</th></tr>`;
+      body.innerHTML = `
+        <tr>
+          <td colspan="4">
+            <div class="row2">
+              <div class="field"><label>Part Name *</label><input id="pm_name" type="text" placeholder="e.g., BRG-HOUSING"/></div>
+              <div class="field"><label>Drawing No</label><input id="pm_drw" type="text" placeholder="e.g., DR-001"/></div>
+            </div>
+            <div class="row2">
+              <div class="field"><label>Material</label><input id="pm_mat" type="text" placeholder="e.g., EN8"/></div>
+              <div class="field" style="display:flex; align-items:flex-end; gap:10px;">
+                <button class="btn success" onclick="addPart()">Add Part</button>
+              </div>
+            </div>
+            <div class="muted">Same Part Name duplicate not allowed. Drawing/Material optional.</div>
+          </td>
+        </tr>
+      `;
+      parts.forEach(p=>{
+        body.innerHTML += `<tr>
+          <td><b>${escapeHtml(p.name)}</b></td><td>${escapeHtml(p.drawing||"")}</td><td>${escapeHtml(p.material||"")}</td>
+          <td><button class="mini del" onclick="deletePart('${escapeHtml(p.name)}')">Delete</button></td>
+        </tr>`;
+      });
+      if (!parts.length) body.innerHTML += `<tr><td colspan="4" class="muted">No parts. Add above.</td></tr>`;
+    }
+    else if (activeTab === "partToolView"){
+      table.style.display = "none";
+      head.innerHTML = ""; body.innerHTML = "";
+      invSumPanel.style.display = "block";
+      invSumPanel.innerHTML = `
+        <div class="muted" style="margin-bottom:8px;">Select Part from top-right.</div>
+        <table>
+          <thead><tr><th>Code</th><th>Description</th><th>Last Issue Date</th></tr></thead>
+          <tbody id="ptvBody"></tbody>
+        </table>
+      `;
+      const ptvBody = document.getElementById("ptvBody");
+      if (!ptvSelectedPart){
+        ptvBody.innerHTML = `<tr><td colspan="3" class="muted">Select a Part to view items.</td></tr>`;
+      } else {
+        const rows = computePartToolViewRows(ptvSelectedPart);
+        if (!rows.length){
+          ptvBody.innerHTML = `<tr><td colspan="3" class="muted">No issue records for '${escapeHtml(ptvSelectedPart)}'.</td></tr>`;
+        } else {
+          ptvBody.innerHTML = rows.map(r=>{
+            const dateStr = r.lastIssueTs ? new Date(r.lastIssueTs).toLocaleString() : "-";
+            return `<tr><td><b>${escapeHtml(r.code)}</b></td><td>${escapeHtml(r.desc)}</td><td>${escapeHtml(dateStr)}</td></tr>`;
+          }).join("");
+        }
+      }
+    }
+    else if (activeTab === "inventorySummary"){
+      table.style.display = "none";
+      head.innerHTML = ""; body.innerHTML = "";
+      invSumPanel.style.display = "block";
+
+      const sumList = computeItemSummary();
+      const sumRows = sumList.map(r=>{
+        const statusCell = r.status==="LOW" ? `<span class="pill low">LOW</span>` : r.status==="OK" ? `<span class="pill ok">OK</span>` : `<span class="pill">-</span>`;
+        const hasStock = !!stock.find(s=>s.code===r.code);
+        const actionCell = hasStock
+          ? `<button class="mini del" title="Delete item" onclick="requestDeleteItem('${escapeHtml(r.code)}')">Delete</button>`
+          : `<span class="muted">—</span>`;
+        return `
+          <tr>
+            <td><b>${escapeHtml(r.code)}</b></td>
+            <td>${escapeHtml(r.desc || "")}</td>
+            <td>${r.live}</td>
+            <td>${r.issuedPending}</td>
+            <td>${r.scrapQty}</td>
+            <td>${(r.min ?? "—")}</td>
+            <td>${statusCell}</td>
+            <td>${actionCell}</td>
+          </tr>`;
+      }).join("") || `<tr><td colspan="8" class="muted">No items found.</td></tr>`;
+
+      invSumPanel.innerHTML = `
+        <h3 class="section-title">Item Summary</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Code</th><th>Description</th><th>Live Qty</th><th>Issued Pending</th>
+              <th>Scrap</th><th>Min</th><th>Status</th><th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="sumBody">${sumRows}</tbody>
+        </table>
+      `;
+    }
+
+    // Stats
+    const totalStock = stock.reduce((a,b)=>a+(Number(b.qty)||0),0);
+    const pendingLines = transactions.filter(t=>t.status==="Pending").length;
+    const totalScrapQty = transactions.filter(t=>t.status==="Scrapped").reduce((a,b)=>a+(Number(b.qty)||0),0);
+    const lowCount = stock.filter(s=>(Number(s.qty)||0) <= (Number(s.min)||0)).length;
+
+    document.getElementById("totalStock").textContent = totalStock;
+    document.getElementById("totalInUse").textContent = pendingLines;
+    document.getElementById("totalScrap").textContent = totalScrapQty;
+    document.getElementById("lowCount").textContent = lowCount;
+  }
+
+  /* ---------- Auto Sync ---------- */
+  function getDataSnapshot(){ try{ return JSON.stringify({ stock, transactions, operators, parts }); }catch(e){ return ""; } }
+  let lastSnapshot = "";
+  let autoSyncTimer = null;
+
+  function runAutoSync(){
+    const snap = getDataSnapshot();
+    if (snap !== lastSnapshot){
+      saveAll(); lastSnapshot = getDataSnapshot();
+      setSyncChip("Auto: Saved (" + new Date().toLocaleTimeString() + ")");
+    } else {
+      setSyncChip("Auto: No change (" + new Date().toLocaleTimeString() + ")");
+    }
+  }
+  function startAutoSync(){ if (autoSyncTimer) clearInterval(autoSyncTimer); autoSyncTimer = setInterval(runAutoSync, 5*60*1000); }
+
+  /* ---------- Global error toasts ---------- */
+  window.addEventListener("error", (e)=>{
+    try{
+      const msg = (e?.error?.message) || e?.message || "Unexpected error";
+      toast("error","Error", msg);
+    }catch(_){}
+  });
+  window.addEventListener("unhandledrejection", (e)=>{
+    try{
+      const msg = (e?.reason && (e.reason.message || String(e.reason))) || "Unhandled rejection";
+      toast("error","Error", msg);
+    }catch(_){}
+  });
+
+  /* ---------- Masters actions ---------- */
+  function addOperator(){
+    const el = document.getElementById("opNewName");
+    const name = (el?.value||"").trim();
+    if (!name) return toast("warn","Name Required","ઓપરેટરનું નામ નાખો.");
+    if (opExists(name)) return toast("warn","Duplicate","આ operator પહેલેથી જ છે.");
+    operators.push(name);
+    el.value = "";
+    saveAll(); render();
+    toast("success","Operator Added", name);
+  }
+  function deleteOperator(name){
+    const key = normName(name);
+    const ok = confirm(`Delete operator '${name}'?`);
+    if (!ok) return;
+    operators = operators.filter(o => normName(o)!==key);
+    saveAll(); render();
+    toast("success","Operator Deleted", name);
+  }
+
+  function addPart(){
+    const name = document.getElementById("pm_name").value.trim();
+    const drw  = document.getElementById("pm_drw").value.trim();
+    const mat  = document.getElementById("pm_mat").value.trim();
+    if (!name) return toast("warn","Part Name Required","Part Name નાખો.");
+    if (partExists(name)) return toast("warn","Duplicate","આ Part Name પહેલેથી જ છે.");
+    parts.push({ name, drawing: drw, material: mat });
+    document.getElementById("pm_name").value = "";
+    document.getElementById("pm_drw").value = "";
+    document.getElementById("pm_mat").value = "";
+    saveAll(); render();
+    toast("success","Part Added", name);
+  }
+  function deletePart(name){
+    const key = normName(name);
+    const pendCount = transactions.filter(t=> normName(t.partName||"")===key && t.status==="Pending").length;
+    if (pendCount>0){
+      toast("error","Delete Blocked",`This Part has ${pendCount} pending line(s). Close them first.`);
+      return;
+    }
+    const ok = confirm(`Delete Part '${name}' from master?\n(Transactions will not be deleted)`);
+    if (!ok) return;
+    parts = parts.filter(p => normName(p.name)!==key);
+    saveAll(); render();
+    toast("success","Part Deleted", name);
+  }
+
+  /* ---------- Init ---------- */
+  /* ---------- Init ---------- */
+  (function init(){
+    document.body.setAttribute("data-theme", meta.theme || "dark");
+    setSyncChip(meta.lastSaved ? ("Saved @ " + meta.lastSaved) : "Ready");
+    
+    lastSnapshot = getDataSnapshot();
+    startAutoSync();
+    updateSlipPreview();
+    
+    // પેજ લોડ થાય ત્યારે ડેટા ખેંચવા માટે ફંક્શન કોલ
+    fetchFromCloud(); 
+    
+    render(); // બધું સેટ થયા પછી છેલ્લે રેન્ડર કરો
+
+    // Live duplicate hint on Add Item
+    ["ai_code","ai_desc"].forEach(id=>{
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener("input", ()=>{
+        const code = normCode(document.getElementById("ai_code").value);
+        const desc = document.getElementById("ai_desc").value;
+        const d = findDupAdvanced(code, desc, -1, 0.80);
+        const hasDup = d.byCode!==-1 || d.byDesc!==-1 || d.byCodeSoft!==-1 || d.byDescFuzzy!==-1;
+        el.style.borderColor = hasDup ? "var(--red)" : "var(--stroke)";
+        el.title = hasDup ? "Duplicate/Similar detected" : "";
+      });
+    });
+  })();
+
+  // આ ફંક્શનને init() ની બહાર રાખો જેથી તે ગમે ત્યાંથી એક્સેસ થઈ શકે
+  async function fetchFromCloud() {
+    try {
+        const { data: cloudStock, error } = await supabaseClient.from('stock').select('*');
+        if (error) throw error;
+
+        if (cloudStock && cloudStock.length > 0) {
+            stock = cloudStock.map(s => ({ 
+                code: s.code, 
+                desc: s.description, 
+                qty: s.qty, 
+                min: s.min_level 
+            }));
+            render(); 
+            setSyncChip("Cloud Data Loaded ✅");
+        }
+    } catch (e) {
+        console.error("Cloud Fetch Error:", e);
+        setSyncChip("Offline Mode / Load Error");
+    }
+  }
+
+</script>
+
+</body>
+</html>
