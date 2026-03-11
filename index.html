@@ -135,52 +135,38 @@
     .toast.warn .dot{ background:var(--amber); }
     .toast.error .dot{ background:var(--red); }
 
-         
-    @media (max-width:1100px){
-      #menuBtn { display: block !important; color: white; background: none; border: none; font-size: 24px; cursor: pointer; }
-      header.glass { flex-direction: column !important; align-items: flex-start !important; padding: 12px !important; gap: 10px !important; }
-      .brand { width: 100% !important; justify-content: flex-start !important; }
-      .toolbar { width: 100% !important; justify-content: flex-start !important; flex-wrap: wrap; gap: 6px !important; }
-      .app { grid-template-columns: 1fr; }
-      .sidebar {
-        position: fixed; left: -380px; top: 0; z-index: 10000;
-        width: 300px; height: 100vh; transition: 0.3s ease;
-        background: var(--bg1); padding: 80px 20px 20px 20px;
-      }
-      .sidebar.active { left: 0; box-shadow: 10px 0 30px rgba(0,0,0,0.5); }
-      .stats { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-      table { min-width: 600px; }
-    }
-
-    
-
+    @media (max-width:1100px){ .app{ grid-template-columns:1fr; } .sidebar{ position:relative; height:auto; } .stats{ grid-template-columns:repeat(2,1fr); } table{ min-width:760px; } }
     @media (max-width:520px){ .stats{ grid-template-columns:1fr; } table{ min-width:680px; } header.glass{ gap:10px; } }
   </style>
 </head>
 
 <body data-theme="dark">
 
-
-  <header class="glass" style="display: flex; flex-direction: column; gap: 10px; padding: 12px;">
-  <div class="brand" style="display: flex; align-items: center; gap: 12px; width: 100%;">
-    <button class="btn" id="menuBtn" onclick="toggleSidebar()" style="display:none; font-size:24px; background:none; border:none; padding:0; cursor:pointer; color:white;">☰</button>
-    
-    <div class="logo" aria-hidden="true" style="width:36px; height:36px;">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M7 7h10v10H7V7Z" stroke="white" stroke-width="2"/><path d="M4 4h16v16H4V4Z" stroke="rgba(255,255,255,.5)" stroke-width="2"/></svg>
+<header class="glass">
+  <div class="brand">
+    <div class="logo" aria-hidden="true">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M7 7h10v10H7V7Z" stroke="rgba(255,255,255,.9)" stroke-width="2"/><path d="M4 4h16v16H4V4Z" stroke="rgba(255,255,255,.55)" stroke-width="2"/></svg>
     </div>
     <div>
-      <h1 style="font-size: 15px; margin:0;">IMW Tooling</h1>
-      <small style="font-size: 11px; opacity: 0.7;">KULDIP PATEL</small>
+      <h1>IMW Tooling Management</h1>
+      <small>Modern Glass UI • Excel Import (SheetJS) • LocalStorage Sync • Auto-sync</small>
     </div>
   </div>
 
-  <div class="toolbar" style="display: flex; gap: 8px; flex-wrap: wrap; width: 100%; justify-content: flex-start;">
-    <span class="chip" id="syncChip" style="font-size: 10px; padding: 4px 8px;">Sync: Ready</span>
-    <button class="btn primary" style="font-size: 11px; padding: 6px 10px;" onclick="triggerExcelPick()">Excel Upload</button>
-    <button class="btn success" style="font-size: 11px; padding: 6px 10px;" onclick="exportStockXlsx()">Export</button>
+  <div class="toolbar">
+    <span class="chip" id="syncChip">Sync: Ready</span>
+
+    <!-- Excel Upload: BUTTON + hidden file input -->
+    <button class="btn primary" title="Excel upload (Code, Description, Quantity, Min_Level)" onclick="triggerExcelPick()">
+      Excel Upload
+    </button>
+    <input id="excelFile" type="file" accept=".xlsx,.xls" style="display:none;" />
+
+    <button class="btn" onclick="downloadTemplate()">Template (.xlsx)</button>
+    <button class="btn success" onclick="exportStockXlsx()">Export Stock</button>
+    <button class="btn" onclick="toggleTheme()">Theme</button>
   </div>
-  </header>
-  
+</header>
 
 <div class="app">
   <!-- Sidebar -->
@@ -1519,54 +1505,57 @@
   }
 
   /* ---------- Init ---------- */
+  /* ---------- Init ---------- */
   (function init(){
     document.body.setAttribute("data-theme", meta.theme || "dark");
     setSyncChip(meta.lastSaved ? ("Saved @ " + meta.lastSaved) : "Ready");
     
+    lastSnapshot = getDataSnapshot();
     startAutoSync();
     updateSlipPreview();
     
-    // આ લાઇન ઉમેરવી જરૂરી છે, જેનાથી ડેટા લોડ થશે
+    // પેજ લોડ થાય ત્યારે ડેટા ખેંચવા માટે ફંક્શન કોલ
     fetchFromCloud(); 
     
-    render(); 
+    render(); // બધું સેટ થયા પછી છેલ્લે રેન્ડર કરો
+
+    // Live duplicate hint on Add Item
+    ["ai_code","ai_desc"].forEach(id=>{
+      const el = document.getElementById(id);
+      if (!el) return;
+      el.addEventListener("input", ()=>{
+        const code = normCode(document.getElementById("ai_code").value);
+        const desc = document.getElementById("ai_desc").value;
+        const d = findDupAdvanced(code, desc, -1, 0.80);
+        const hasDup = d.byCode!==-1 || d.byDesc!==-1 || d.byCodeSoft!==-1 || d.byDescFuzzy!==-1;
+        el.style.borderColor = hasDup ? "var(--red)" : "var(--stroke)";
+        el.title = hasDup ? "Duplicate/Similar detected" : "";
+      });
+    });
   })();
 
-  // આ ફંક્શન init ની બહાર હોવું જોઈએ
+  // આ ફંક્શનને init() ની બહાર રાખો જેથી તે ગમે ત્યાંથી એક્સેસ થઈ શકે
   async function fetchFromCloud() {
     try {
-        setSyncChip("Loading...");
         const { data: cloudStock, error } = await supabaseClient.from('stock').select('*');
         if (error) throw error;
+
         if (cloudStock && cloudStock.length > 0) {
             stock = cloudStock.map(s => ({ 
-                code: s.code, desc: s.description, qty: s.qty, min: s.min_level 
+                code: s.code, 
+                desc: s.description, 
+                qty: s.qty, 
+                min: s.min_level 
             }));
             render(); 
             setSyncChip("Cloud Data Loaded ✅");
         }
     } catch (e) {
-        setSyncChip("Offline Mode");
+        console.error("Cloud Fetch Error:", e);
+        setSyncChip("Offline Mode / Load Error");
     }
   }
 
-  function toggleSidebar() {
-    const sidebar = document.querySelector('.sidebar');
-    const btn = document.getElementById('menuBtn');
-    sidebar.classList.toggle('active');
-    btn.innerHTML = sidebar.classList.contains('active') ? "✕" : "☰";
-  }
-    
-
-  document.addEventListener('click', function(event) {
-    const sidebar = document.querySelector('.sidebar');
-    const btn = document.getElementById('menuBtn');
-    if (window.innerWidth <= 1100 && !sidebar.contains(event.target) && !btn.contains(event.target) && sidebar.classList.contains('active')) {
-      toggleSidebar();
-    }
-  });
-  
-          
 </script>
 
 </body>
