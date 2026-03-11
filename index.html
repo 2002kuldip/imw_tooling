@@ -135,32 +135,17 @@
     .toast.warn .dot{ background:var(--amber); }
     .toast.error .dot{ background:var(--red); }
 
-        @media (max-width:1100px) { 
-      /* હેડરને ઓવરલેપ થતું અટકાવવા માટે */
+            @media (max-width:1100px) { 
       header.glass {
         flex-direction: column !important; 
         align-items: flex-start !important;
         padding: 12px !important;
         gap: 12px !important;
       }
+      .brand { width: 100% !important; justify-content: flex-start !important; }
+      #menuBtn { display: block !important; margin-right: 10px; }
+      .toolbar { width: 100% !important; justify-content: flex-start !important; gap: 6px !important; }
 
-      .brand {
-        width: 100% !important;
-        justify-content: flex-start !important;
-      }
-
-      #menuBtn { 
-        display: block !important; 
-        margin-right: 10px;
-      }
-
-      .toolbar {
-        width: 100% !important;
-        justify-content: flex-start !important;
-        gap: 6px !important;
-      }
-
-      /* મોબાઈલ સાઇડબાર સેટિંગ્સ */
       .sidebar {
         position: fixed;
         left: -380px; 
@@ -171,19 +156,12 @@
         transition: 0.3s ease;
         background: var(--bg1);
         padding: 80px 20px 20px 20px;
-        box-shadow: none;
       }
-      
-      .sidebar.active {
-        left: 0;
-        box-shadow: 10px 0 30px rgba(0,0,0,0.5);
-      }
-
+      .sidebar.active { left: 0; box-shadow: 10px 0 30px rgba(0,0,0,0.5); }
       .app { grid-template-columns: 1fr; }
       .stats { grid-template-columns: repeat(2, 1fr); gap: 10px; }
-      table { min-width: 600px; }
-        }
-    
+    }
+
     
 
     @media (max-width:520px){ .stats{ grid-template-columns:1fr; } table{ min-width:680px; } header.glass{ gap:10px; } }
@@ -1552,7 +1530,6 @@
   }
 
   /* ---------- Init ---------- */
-  /* ---------- Init ---------- */
   (function init(){
     document.body.setAttribute("data-theme", meta.theme || "dark");
     setSyncChip(meta.lastSaved ? ("Saved @ " + meta.lastSaved) : "Ready");
@@ -1561,29 +1538,16 @@
     startAutoSync();
     updateSlipPreview();
     
-    // પેજ લોડ થાય ત્યારે ડેટા ખેંચવા માટે ફંક્શન કોલ
+    // ક્લાઉડ ડેટા લોડ કરવા માટેનો કોલ
     fetchFromCloud(); 
     
-    render(); // બધું સેટ થયા પછી છેલ્લે રેન્ડર કરો
-})();
-    // Live duplicate hint on Add Item
-    ["ai_code","ai_desc"].forEach(id=>{
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.addEventListener("input", ()=>{
-        const code = normCode(document.getElementById("ai_code").value);
-        const desc = document.getElementById("ai_desc").value;
-        const d = findDupAdvanced(code, desc, -1, 0.80);
-        const hasDup = d.byCode!==-1 || d.byDesc!==-1 || d.byCodeSoft!==-1 || d.byDescFuzzy!==-1;
-        el.style.borderColor = hasDup ? "var(--red)" : "var(--stroke)";
-        el.title = hasDup ? "Duplicate/Similar detected" : "";
-      });
-    });
+    render(); 
   })();
 
-  // આ ફંક્શનને init() ની બહાર રાખો જેથી તે ગમે ત્યાંથી એક્સેસ થઈ શકે
+  // આ ફંક્શનને init ની બહાર રાખવું જરૂરી છે
   async function fetchFromCloud() {
     try {
+        setSyncChip("Loading...");
         const { data: cloudStock, error } = await supabaseClient.from('stock').select('*');
         if (error) throw error;
 
@@ -1598,11 +1562,12 @@
             setSyncChip("Cloud Data Loaded ✅");
         }
     } catch (e) {
-        console.error("Cloud Fetch Error:", e);
-        setSyncChip("Offline Mode / Load Error");
+        console.error("Fetch Error:", e);
+        setSyncChip("Offline Mode");
     }
   }
-    function toggleSidebar() {
+
+  function toggleSidebar() {
     const sidebar = document.querySelector('.sidebar');
     const btn = document.getElementById('menuBtn');
     sidebar.classList.toggle('active');
@@ -1616,7 +1581,7 @@
       toggleSidebar();
     }
   });
-                            
+  
           
 </script>
 
