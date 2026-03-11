@@ -1584,19 +1584,13 @@
         setSyncChip("Offline Mode / Load Error");
     }
   }
-  function toggleSidebar() {
+    function toggleSidebar() {
     const sidebar = document.querySelector('.sidebar');
     const btn = document.getElementById('menuBtn');
     sidebar.classList.toggle('active');
-    
-    if(sidebar.classList.contains('active')) {
-      btn.innerHTML = "✕";
-    } else {
-      btn.innerHTML = "☰";
-    }
+    btn.innerHTML = sidebar.classList.contains('active') ? "✕" : "☰";
   }
 
-  // સાઈડબારની બહાર ક્લિક કરવાથી મેનુ બંધ થાય
   document.addEventListener('click', function(event) {
     const sidebar = document.querySelector('.sidebar');
     const btn = document.getElementById('menuBtn');
@@ -1604,12 +1598,7 @@
       toggleSidebar();
     }
   });
-     function toggleSidebar() {
-    const sidebar = document.querySelector('.sidebar');
-    const btn = document.getElementById('menuBtn');
-    sidebar.classList.toggle('active');
-    btn.innerHTML = sidebar.classList.contains('active') ? "✕" : "☰";
-                                   }
+                            
           
 </script>
 
