@@ -135,7 +135,31 @@
     .toast.warn .dot{ background:var(--amber); }
     .toast.error .dot{ background:var(--red); }
 
-    @media (max-width:1100px){ .app{ grid-template-columns:1fr; } .sidebar{ position:relative; height:auto; } .stats{ grid-template-columns:repeat(2,1fr); } table{ min-width:760px; } }
+        @media (max-width:1100px){ 
+      #menuBtn { display: block !important; } 
+      
+      .sidebar {
+        position: fixed;
+        left: -380px; 
+        top: 0;
+        z-index: 10000;
+        width: 320px;
+        height: 100vh;
+        transition: 0.3s ease;
+        background: var(--bg1);
+        padding-top: 60px; /* હેડર માટે જગ્યા */
+      }
+      
+      .sidebar.active {
+        left: 0;
+        box-shadow: 5px 0 15px rgba(0,0,0,0.5);
+      }
+      
+      .app { grid-template-columns: 1fr; } 
+      .stats { grid-template-columns:repeat(2,1fr); } 
+      table { min-width:760px; } 
+    }
+
     @media (max-width:520px){ .stats{ grid-template-columns:1fr; } table{ min-width:680px; } header.glass{ gap:10px; } }
   </style>
 </head>
@@ -152,7 +176,10 @@
       <small>Modern Glass UI • Excel Import (SheetJS) • LocalStorage Sync • Auto-sync</small>
     </div>
   </div>
+  <button class="btn" id="menuBtn" onclick="toggleSidebar()" style="display:none; font-size:20px; padding: 5px 15px; margin-right: 10px;">☰</button>
 
+  <div class="toolbar">
+    
   <div class="toolbar">
     <span class="chip" id="syncChip">Sync: Ready</span>
 
@@ -1555,7 +1582,27 @@
         setSyncChip("Offline Mode / Load Error");
     }
   }
+  function toggleSidebar() {
+    const sidebar = document.querySelector('.sidebar');
+    const btn = document.getElementById('menuBtn');
+    sidebar.classList.toggle('active');
+    
+    if(sidebar.classList.contains('active')) {
+      btn.innerHTML = "✕";
+    } else {
+      btn.innerHTML = "☰";
+    }
+  }
 
+  // સાઈડબારની બહાર ક્લિક કરવાથી મેનુ બંધ થાય
+  document.addEventListener('click', function(event) {
+    const sidebar = document.querySelector('.sidebar');
+    const btn = document.getElementById('menuBtn');
+    if (window.innerWidth <= 1100 && !sidebar.contains(event.target) && !btn.contains(event.target) && sidebar.classList.contains('active')) {
+      toggleSidebar();
+    }
+  });
+    
 </script>
 
 </body>
