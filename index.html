@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="gu">
 <head>
-  <meta charset="UTF-8" />
+  <meta charset="UTF-8" /
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>IMW Tooling - Modern Glass Dashboard (Excel Sync)</title>
 
@@ -1655,16 +1655,25 @@ function confirmReturnAction(id, condition) {
 
   /* ---------- Init ---------- */
   /* ---------- Init ---------- */
-(function init(){
+async function init() {
+    // થીમ સેટ કરો
     document.body.setAttribute("data-theme", meta.theme || "dark");
+    setSyncChip(meta.lastSaved ? ("Saved @ " + meta.lastSaved) : "Ready");
     
-    // ક્લાઉડમાંથી ડેટા ખેંચો
-    fetchFromCloud(); 
+    // ક્લાઉડમાંથી ડેટા ખેંચો અને તેની રાહ જુઓ
+    await fetchFromCloud(); 
     
+    // ડેટા લોડ થયા પછીના સેટિંગ્સ
+    lastSnapshot = getDataSnapshot();
     startAutoSync();
     updateSlipPreview();
+    
+    // હવે ફાઈનલ UI રેન્ડર કરો
     render(); 
-})();
+}
+
+// ફંક્શન લોડ કરો
+init();
   
     // Live duplicate hint on Add Item
     ["ai_code","ai_desc"].forEach(id=>{
@@ -1719,7 +1728,6 @@ function confirmReturnAction(id, condition) {
             }));
         }
 
-        render(); // ડેટા આવ્યા પછી UI અપડેટ કરો
         setSyncChip("Cloud Data Loaded ✅");
     } catch (e) {
         console.error("Fetch Error:", e);
