@@ -135,31 +135,21 @@
     .toast.warn .dot{ background:var(--amber); }
     .toast.error .dot{ background:var(--red); }
 
-            @media (max-width:1100px) { 
-      header.glass {
-        flex-direction: column !important; 
-        align-items: flex-start !important;
-        padding: 12px !important;
-        gap: 12px !important;
-      }
+         
+    @media (max-width:1100px){
+      #menuBtn { display: block !important; color: white; background: none; border: none; font-size: 24px; cursor: pointer; }
+      header.glass { flex-direction: column !important; align-items: flex-start !important; padding: 12px !important; gap: 10px !important; }
       .brand { width: 100% !important; justify-content: flex-start !important; }
-      #menuBtn { display: block !important; margin-right: 10px; }
-      .toolbar { width: 100% !important; justify-content: flex-start !important; gap: 6px !important; }
-
+      .toolbar { width: 100% !important; justify-content: flex-start !important; flex-wrap: wrap; gap: 6px !important; }
+      .app { grid-template-columns: 1fr; }
       .sidebar {
-        position: fixed;
-        left: -380px; 
-        top: 0;
-        z-index: 10000;
-        width: 300px;
-        height: 100vh;
-        transition: 0.3s ease;
-        background: var(--bg1);
-        padding: 80px 20px 20px 20px;
+        position: fixed; left: -380px; top: 0; z-index: 10000;
+        width: 300px; height: 100vh; transition: 0.3s ease;
+        background: var(--bg1); padding: 80px 20px 20px 20px;
       }
       .sidebar.active { left: 0; box-shadow: 10px 0 30px rgba(0,0,0,0.5); }
-      .app { grid-template-columns: 1fr; }
       .stats { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+      table { min-width: 600px; }
     }
 
     
@@ -170,9 +160,10 @@
 
 <body data-theme="dark">
 
-<header class="glass" style="display: flex; flex-direction: column; gap: 10px; padding: 12px;">
+
+  <header class="glass" style="display: flex; flex-direction: column; gap: 10px; padding: 12px;">
   <div class="brand" style="display: flex; align-items: center; gap: 12px; width: 100%;">
-    <button class="btn" id="menuBtn" onclick="toggleSidebar()" style="display:none; font-size:24px; background:none; border:none; padding:0; cursor:pointer;">☰</button>
+    <button class="btn" id="menuBtn" onclick="toggleSidebar()" style="display:none; font-size:24px; background:none; border:none; padding:0; cursor:pointer; color:white;">☰</button>
     
     <div class="logo" aria-hidden="true" style="width:36px; height:36px;">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M7 7h10v10H7V7Z" stroke="white" stroke-width="2"/><path d="M4 4h16v16H4V4Z" stroke="rgba(255,255,255,.5)" stroke-width="2"/></svg>
@@ -186,11 +177,9 @@
   <div class="toolbar" style="display: flex; gap: 8px; flex-wrap: wrap; width: 100%; justify-content: flex-start;">
     <span class="chip" id="syncChip" style="font-size: 10px; padding: 4px 8px;">Sync: Ready</span>
     <button class="btn primary" style="font-size: 11px; padding: 6px 10px;" onclick="triggerExcelPick()">Excel Upload</button>
-    <button class="btn" style="font-size: 11px; padding: 6px 10px;" onclick="downloadTemplate()">Template</button>
     <button class="btn success" style="font-size: 11px; padding: 6px 10px;" onclick="exportStockXlsx()">Export</button>
-    <button class="btn" style="font-size: 11px; padding: 6px 10px;" onclick="toggleTheme()">Theme</button>
   </div>
-</header>
+  </header>
   
 
 <div class="app">
@@ -1534,35 +1523,29 @@
     document.body.setAttribute("data-theme", meta.theme || "dark");
     setSyncChip(meta.lastSaved ? ("Saved @ " + meta.lastSaved) : "Ready");
     
-    lastSnapshot = getDataSnapshot();
     startAutoSync();
     updateSlipPreview();
     
-    // ક્લાઉડ ડેટા લોડ કરવા માટેનો કોલ
+    // આ લાઇન ઉમેરવી જરૂરી છે, જેનાથી ડેટા લોડ થશે
     fetchFromCloud(); 
     
     render(); 
   })();
 
-  // આ ફંક્શનને init ની બહાર રાખવું જરૂરી છે
+  // આ ફંક્શન init ની બહાર હોવું જોઈએ
   async function fetchFromCloud() {
     try {
         setSyncChip("Loading...");
         const { data: cloudStock, error } = await supabaseClient.from('stock').select('*');
         if (error) throw error;
-
         if (cloudStock && cloudStock.length > 0) {
             stock = cloudStock.map(s => ({ 
-                code: s.code, 
-                desc: s.description, 
-                qty: s.qty, 
-                min: s.min_level 
+                code: s.code, desc: s.description, qty: s.qty, min: s.min_level 
             }));
             render(); 
             setSyncChip("Cloud Data Loaded ✅");
         }
     } catch (e) {
-        console.error("Fetch Error:", e);
         setSyncChip("Offline Mode");
     }
   }
@@ -1573,6 +1556,7 @@
     sidebar.classList.toggle('active');
     btn.innerHTML = sidebar.classList.contains('active') ? "✕" : "☰";
   }
+    
 
   document.addEventListener('click', function(event) {
     const sidebar = document.querySelector('.sidebar');
