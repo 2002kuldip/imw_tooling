@@ -135,13 +135,32 @@
     .toast.warn .dot{ background:var(--amber); }
     .toast.error .dot{ background:var(--red); }
 
-    @media (max-width:1100px){ 
-      #menuBtn { display: block !important; color: white; } 
-      
+        @media (max-width:1100px) { 
+      /* હેડરને ઓવરલેપ થતું અટકાવવા માટે */
       header.glass {
-        padding: 10px !important;
+        flex-direction: column !important; 
+        align-items: flex-start !important;
+        padding: 12px !important;
+        gap: 12px !important;
       }
 
+      .brand {
+        width: 100% !important;
+        justify-content: flex-start !important;
+      }
+
+      #menuBtn { 
+        display: block !important; 
+        margin-right: 10px;
+      }
+
+      .toolbar {
+        width: 100% !important;
+        justify-content: flex-start !important;
+        gap: 6px !important;
+      }
+
+      /* મોબાઈલ સાઇડબાર સેટિંગ્સ */
       .sidebar {
         position: fixed;
         left: -380px; 
@@ -150,22 +169,21 @@
         width: 300px;
         height: 100vh;
         transition: 0.3s ease;
-        background: #0b1220; /* તમારી થીમ મુજબનો ડાર્ક કલર */
+        background: var(--bg1);
         padding: 80px 20px 20px 20px;
-        overflow-y: auto;
+        box-shadow: none;
       }
       
       .sidebar.active {
         left: 0;
         box-shadow: 10px 0 30px rgba(0,0,0,0.5);
       }
-      
-      .app { grid-template-columns: 1fr; } 
-      .stats { grid-template-columns: repeat(1, 1fr); gap: 10px; } 
-      .stat .value { font-size: 20px; }
+
+      .app { grid-template-columns: 1fr; }
+      .stats { grid-template-columns: repeat(2, 1fr); gap: 10px; }
       table { min-width: 600px; }
-      .tab-buttons { overflow-x: auto; white-space: nowrap; display: flex; }
-    }
+        }
+    
     
 
     @media (max-width:520px){ .stats{ grid-template-columns:1fr; } table{ min-width:680px; } header.glass{ gap:10px; } }
@@ -183,7 +201,7 @@
     </div>
     <div>
       <h1 style="font-size: 15px; margin:0;">IMW Tooling</h1>
-      <small style="font-size: 11px; opacity: 0.7;">Modern Glass UI</small>
+      <small style="font-size: 11px; opacity: 0.7;">KULDIP PATEL</small>
     </div>
   </div>
 
@@ -1547,7 +1565,7 @@
     fetchFromCloud(); 
     
     render(); // બધું સેટ થયા પછી છેલ્લે રેન્ડર કરો
-
+})();
     // Live duplicate hint on Add Item
     ["ai_code","ai_desc"].forEach(id=>{
       const el = document.getElementById(id);
