@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="gu">
 <head>
-  <meta charset="UTF-8" /
+  <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>IMW Tooling - Modern Glass Dashboard (Excel Sync)</title>
 
@@ -1655,110 +1655,121 @@ function confirmReturnAction(id, condition) {
 
   /* ---------- Init ---------- */
   /* ---------- Init ---------- */
-async function init() {
-    // થીમ સેટ કરો
-    document.body.setAttribute("data-theme", meta.theme || "dark");
-    setSyncChip(meta.lastSaved ? ("Saved @ " + meta.lastSaved) : "Ready");
-    
-    // ક્લાઉડમાંથી ડેટા ખેંચો અને તેની રાહ જુઓ
-    await fetchFromCloud(); 
-    
-    // ડેટા લોડ થયા પછીના સેટિંગ્સ
-    lastSnapshot = getDataSnapshot();
-    startAutoSync();
-    updateSlipPreview();
-    
-    // હવે ફાઈનલ UI રેન્ડર કરો
-    render(); 
-}
+  /* ---------- Init ---------- */
+  async function init() {
+      // થીમ સેટ કરો
+      document.body.setAttribute("data-theme", meta.theme || "dark");
+      
+      const syncChip = document.getElementById("syncChip");
+      if(syncChip) syncChip.textContent = meta.lastSaved ? ("Saved @ " + meta.lastSaved) : "Ready";
+      
+      // ક્લાઉડમાંથી ડેટા ખેંચો
+      await fetchFromCloud(); 
+      
+      lastSnapshot = getDataSnapshot();
+      startAutoSync();
+      updateSlipPreview();
+      
+      // ફાઈનલ UI રેન્ડર
+      render(); 
+  }
 
-// ફંક્શન લોડ કરો
-init();
-  
-    // Live duplicate hint on Add Item
-    ["ai_code","ai_desc"].forEach(id=>{
+  // Event Listeners for Duplicate Hint
+  ["ai_code", "ai_desc"].forEach(id => {
       const el = document.getElementById(id);
       if (!el) return;
-      el.addEventListener("input", ()=>{
-        const code = normCode(document.getElementById("ai_code").value);
-        const desc = document.getElementById("ai_desc").value;
-        const d = findDupAdvanced(code, desc, -1, 0.80);
-        const hasDup = d.byCode!==-1 || d.byDesc!==-1 || d.byCodeSoft!==-1 || d.byDescFuzzy!==-1;
-        el.style.borderColor = hasDup ? "var(--red)" : "var(--stroke)";
-        el.title = hasDup ? "Duplicate/Similar detected" : "";
+      el.addEventListener("input", () => {
+          const code = normCode(document.getElementById("ai_code").value);
+          const desc = document.getElementById("ai_desc").value;
+          const d = findDupAdvanced(code, desc, -1, 0.80);
+          const hasDup = d.byCode !== -1 || d.byDesc !== -1 || d.byCodeSoft !== -1 || d.byDescFuzzy !== -1;
+          el.style.borderColor = hasDup ? "var(--red)" : "var(--stroke)";
+          el.title = hasDup ? "Duplicate/Similar detected" : "";
       });
-    });
-  })();
+  });
 
-  // આ ફંક્શનને init() ની બહાર રાખો જેથી તે ગમે ત્યાંથી એક્સેસ થઈ શકે
-  async function fetchFromCloud() {
-    try {
-        setSyncChip("Syncing with Cloud...");
+  // Execute Init
+  init();
+
+  // ૧. Sidebar ફંક્શન્સને ગ્લોબલ સ્કોપમાં રાખો જેથી બટન ક્લિક પર ચાલે
+window.toggleSidebar = function() {
+    const sidebar = document.querySelector('.sidebar');
+    if (sidebar) sidebar.classList.toggle('active');
+};
+
+// ૨. આખું પેજ લોડ થઈ જાય પછી જ કોડ રન થાય તે માટે DOMContentLoaded વાપરો
+document.addEventListener("DOMContentLoaded", function() {
+    
+    // ઇનિશિયલાઈઝ ફંક્શન
+    async function init() {
+        // થીમ સેટ કરો
+        document.body.setAttribute("data-theme", meta.theme || "dark");
         
-        // 1. Stock Data Fetch કરો
-        const { data: cloudStock, error: stockErr } = await supabaseClient.from('stock').select('*');
-        if (stockErr) throw stockErr;
-        if (cloudStock && cloudStock.length > 0) {
-            stock = cloudStock.map(s => ({ 
-                code: s.code, 
-                desc: s.description, 
-                qty: s.qty, 
-                min: s.min_level 
-            }));
+        // syncChip ચેક કરો
+        const syncChip = document.getElementById("syncChip");
+        if (syncChip) {
+            syncChip.textContent = meta.lastSaved ? ("Saved @ " + meta.lastSaved) : "Ready";
         }
-
-        // 2. Transactions Data Fetch કરો
-        const { data: cloudTrans, error: transErr } = await supabaseClient.from('transactions').select('*');
-        if (transErr) throw transErr;
-        if (cloudTrans) {
-            transactions = cloudTrans.map(t => ({
-                id: t.id,
-                issueTs: t.issue_ts,
-                date: t.date,
-                returnDate: t.return_date,
-                slipNo: t.slip_no,
-                itemCode: t.item_code,
-                itemDesc: t.item_desc,
-                partName: t.part_name,
-                operator: t.operator,
-                machine: t.machine,
-                qty: t.qty,
-                status: t.status,
-                remarks: t.remarks
-            }));
+        
+        // ક્લાઉડમાંથી ડેટા ખેંચો
+        await fetchFromCloud(); 
+        
+        lastSnapshot = getDataSnapshot();
+        startAutoSync();
+        
+        // જો updateSlipPreview ફંક્શન બનાવેલું હોય તો જ કોલ કરો
+        if (typeof updateSlipPreview === "function") {
+            updateSlipPreview();
         }
-
-        setSyncChip("Cloud Data Loaded ✅");
-    } catch (e) {
-        console.error("Fetch Error:", e);
-        setSyncChip("Offline Mode / Load Error ❌");
+        
+        // ફાઈનલ UI રેન્ડર
+        render(); 
     }
-  }
-  
-// Sidebar toggle function
-function toggleSidebar() {
-  const sidebar = document.querySelector('.sidebar');
-  if (sidebar) {
-    sidebar.classList.toggle('active');
-  }
-}
 
-// Bahr click karvathi sidebar bandh karva mate
+    // ડુપ્લીકેટ હિન્ટ માટે લિસનર્સ (Condition સાથે જેથી null error ન આવે)
+    ["ai_code", "ai_desc"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener("input", () => {
+                const codeInput = document.getElementById("ai_code");
+                const descInput = document.getElementById("ai_desc");
+                
+                if (codeInput && descInput) {
+                    const code = normCode(codeInput.value);
+                    const desc = descInput.value;
+                    const d = findDupAdvanced(code, desc, -1, 0.80);
+                    const hasDup = d.byCode !== -1 || d.byDesc !== -1 || d.byCodeSoft !== -1 || d.byDescFuzzy !== -1;
+                    el.style.borderColor = hasDup ? "var(--red)" : "var(--stroke)";
+                    el.title = hasDup ? "Duplicate/Similar detected" : "";
+                }
+            });
+        }
+    });
+
+    // Excel ફાઈલ લિસનર
+    const excelInput = document.getElementById("excelFile");
+    if (excelInput) {
+        excelInput.addEventListener("change", importExcelStock);
+    }
+
+    // છેલ્લે Init કોલ કરો
+    init();
+});
+
+// ૩. માઉસ ક્લિક લિસનર (બહાર ક્લિક કરવાથી સાઈડબાર બંધ કરવા)
 document.addEventListener('mousedown', function(event) {
-  const sidebar = document.querySelector('.sidebar');
-  const hamburger = document.querySelector('.hamburger');
-  
-  if (window.innerWidth <= 1100 && 
-      sidebar && sidebar.classList.contains('active') && 
-      !sidebar.contains(event.target) && 
-      !hamburger.contains(event.target)) {
-    sidebar.classList.remove('active');
-  }
+    const sidebar = document.querySelector('.sidebar');
+    const hamburger = document.querySelector('.hamburger');
+    if (window.innerWidth <= 1100 && sidebar && sidebar.classList.contains('active')) {
+        if (!sidebar.contains(event.target) && (!hamburger || !hamburger.contains(event.target))) {
+            sidebar.classList.remove('active');
+        }
+    }
 });
 
 
-
 </script>
+<input type="file" id="excelFile" style="display:none;" />
 
 </body>
 </html>
