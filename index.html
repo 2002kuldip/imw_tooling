@@ -1686,6 +1686,7 @@ function confirmReturnAction(id, condition) {
 // ૧. ક્લાઉડ (Supabase) માંથી ડેટા ખેંચવા માટેનું ફંક્શન
 async function fetchFromCloud() {
     try {
+      console.log("Fetching data..."); // આ લાઈન ઉમેરો
         setSyncChip("Loading from Cloud...");
         
         // સ્ટોક ડેટા મેળવો
